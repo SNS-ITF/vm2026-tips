@@ -29,9 +29,10 @@ body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;min-heigh
 .fb{padding:5px 12px;font-size:12px;border:1px solid #ccc;border-radius:20px;cursor:pointer;background:#fff;color:#555}
 .fb:hover{background:#f0f0f0}
 .fb.active{background:#1A2D3D;color:#fff;border-color:#1A2D3D}
-.hbtn{padding:8px 16px;background:#1A2D3D;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:7px;margin-left:auto;white-space:nowrap}
-.hbtn:hover{background:#243d52}
-.hbtn:disabled{opacity:.5;cursor:not-allowed}
+.sync-bar{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12px;color:#888;white-space:nowrap}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
+.sync-dot.ok{background:#2E7D32}
+.sync-dot.err{background:#C62828}
 .fst{font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:10px;display:none}
 .fst.ok{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;display:block}
 .fst.err{background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;display:block}
@@ -235,12 +236,11 @@ function tip(s1,s2){
   return s1>s2?'1':s1===s2?'X':'2';
 }
 
-async function fetchLive(){
+async function fetchLive(manual){
   if(busy)return;busy=true;
-  const btn=document.getElementById('hbtn');
   const st=document.getElementById('fst');
-  btn.disabled=true;btn.innerHTML='<span class="spin">↻</span> Henter…';
-  st.className='fst';st.textContent='';
+  if(st){st.className='fst';st.textContent='';}
+  setSyncStatus('loading','Henter resultater…');
 
   let data=null,lastErr='';
   // Henter data.json fra samme repo – ingen CORS-problemer
@@ -252,10 +252,9 @@ async function fetchLive(){
   }catch(e){lastErr=e.message;}
 
   if(!data||!data.results){
-    st.className='fst err';
-    st.innerHTML='<strong>Kunne ikke hente data.</strong> '+lastErr+
-      '<br><small>Tjek at data.json findes i dit GitHub-repo og at GitHub Action har kørt.</small>';
-    busy=false;btn.disabled=false;btn.innerHTML='⟳ Hent resultater online';return;
+    if(st){st.className='fst err';st.innerHTML='<strong>Kunne ikke hente data.</strong> '+lastErr+'<br><small>Tjek at data.json og GitHub Action er sat op korrekt.</small>';}
+    setSyncStatus('err','Sidst forsøgt: '+new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'}));
+    busy=false;return;
   }
 
   let updated=0,unchanged=0;
@@ -267,10 +266,9 @@ async function fetchLive(){
 
   save();
   const ts=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
-  st.className='fst ok';
-  st.textContent=`✓ Hentet kl. ${ts} – ${updated} nye, ${unchanged} uændrede resultater. Kilde: openfootball/worldcup.json`;
+  setSyncStatus('ok',`Opdateret kl. ${ts} – ${updated} nye resultater`);
   renderTips();renderStilling();
-  busy=false;btn.disabled=false;btn.innerHTML='⟳ Hent resultater online';
+  busy=false;
 }
 
 function showTab(t){
@@ -320,7 +318,7 @@ function renderTips(){
   const filters=[['all','Alle'],['Gruppespil – Runde 1','Runde 1'],['Gruppespil – Runde 2','Runde 2'],['Gruppespil – Runde 3','Runde 3'],['Runde af 32','R32'],['Runde af 16','R16'],['Kvartfinale','QF'],['Semifinale','SF'],['FINALE','Finale']];
   let h=`<div class="fbar">`;
   filters.forEach(([v,l])=>h+=`<button class="fb${S.filter===v?' active':''}" onclick="setFilter('${v}')">${l}</button>`);
-  h+=`<button class="hbtn" id="hbtn" onclick="fetchLive()">⟳ Hent resultater online</button></div>`;
+  h+=`<div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Henter resultater…</span></div></div>`;
   h+=`<div id="fst" class="fst"></div>`;
   h+=`<div class="sw"><table><thead><tr>
     <th style="width:36px">#</th><th style="width:90px">Dato</th>
@@ -417,8 +415,19 @@ function resetAll(){
   {S={participants:[],tips:{},results:{},live:{},filter:'all'};save();render();}
 }
 
+function setSyncStatus(state,txt){
+  const dot=document.getElementById('sync-dot');
+  const label=document.getElementById('sync-txt');
+  if(dot){dot.className='sync-dot'+(state==='ok'?' ok':state==='err'?' err':'');}
+  if(label){label.textContent=txt;}
+}
+
 function render(){renderStilling();renderSetup();}
+
+// Auto-hent ved load og derefter hvert 10. minut
 load();
+setTimeout(()=>fetchLive(),800);
+setInterval(()=>fetchLive(),10*60*1000);
 </script>
 </body>
 </html>
