@@ -1,0 +1,31 @@
+name: Opdater kampresultater
+ 
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+ 
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - name: Hent resultater fra openfootball
+        run: |
+          python3 update.py > data.json
+          echo "--- data.json indhold ---"
+          cat data.json
+ 
+      - name: Verificer JSON
+        run: python3 -c "import json; d=json.load(open('data.json')); print(f'OK: {d[\"count\"]} resultater')"
+ 
+      - name: Commit hvis ændret
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "Auto: opdater kampresultater ($(date -u +%H:%M))"
+          git push
