@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VM 2026 – Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;padding:16px}
+h1{background:#1A2D3D;color:#fff;padding:14px 20px;border-radius:10px;font-size:17px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:14px;font-weight:600;margin-bottom:12px;color:#1a2d3d}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#1A2D3D;color:#fff;padding:8px 10px;text-align:left;font-weight:600}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:middle}
+tr:nth-child(even) td{background:#fafafa}
+.score-inp{width:60px;padding:4px 6px;font-size:13px;text-align:center;border:1px solid #ccc;border-radius:6px}
+.score-inp:focus{outline:none;border-color:#1A2D3D}
+.sep{display:inline-block;width:20px;text-align:center;font-weight:700;color:#888}
+.save-btn{padding:5px 14px;background:#1A2D3D;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+.save-btn:hover{background:#243d52}
+.save-btn.saved{background:#2E7D32}
+.lock{color:#999;font-size:11px}
+.status{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.status.ok{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;display:block}
+.status.err{background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;display:block}
+.section{background:#1A2D3D;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;letter-spacing:.05em}
+.tip-badge{display:inline-block;width:28px;text-align:center;padding:2px 4px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid #ddd;color:#555}
+.tip-1{background:#E3F2FD;border-color:#90CAF9;color:#1565C0}
+.tip-x{background:#FFF8E1;border-color:#FFD54F;color:#795548}
+.tip-2{background:#FCE4EC;border-color:#F48FB1;color:#880E4F}
+</style>
+</head>
+<body>
+
+<h1>⚙️ VM 2026 – Resultat Admin</h1>
+
+<div id="status" class="status"></div>
+
+<div class="card">
+  <h2>Kampresultater — opdater manuelt</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:12px">Skriv slutresultat (90 min) og klik Gem. Opdaterer Supabase med det samme så alle ser det.</p>
+  <table>
+    <thead><tr>
+      <th style="width:40px">#</th>
+      <th>Hjemmehold</th>
+      <th style="width:120px;text-align:center">Resultat</th>
+      <th>Udehold</th>
+      <th style="width:46px;text-align:center">Tip</th>
+      <th style="width:70px"></th>
+    </tr></thead>
+    <tbody id="match-rows"></tbody>
+  </table>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://fttdvrfibkxqzfljyhoj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGR2cmZpYmt4cXpmbGp5aG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTAzNDQsImV4cCI6MjA5NzEyNjM0NH0.juD8gL9wk_TRZMSRKtC4pQQ1WPTTBP3e8cRTByAxjEo';
+
+const MATCHES = [
+  [1,'Mexico','South Africa','Gruppespil – Runde 1'],
+  [2,'Rep. of Korea','Czech Rep.','Gruppespil – Runde 1'],
+  [3,'Canada','Bosnia/Herzeg.','Gruppespil – Runde 1'],
+  [4,'USA','Paraguay','Gruppespil – Runde 1'],
+  [5,'Haiti','Scotland','Gruppespil – Runde 1'],
+  [6,'Australia','Turkey','Gruppespil – Runde 1'],
+  [7,'Brazil','Morocco','Gruppespil – Runde 1'],
+  [8,'Qatar','Switzerland','Gruppespil – Runde 1'],
+  [9,'Ivory Coast','Ecuador','Gruppespil – Runde 1'],
+  [10,'Germany','Curaçao','Gruppespil – Runde 1'],
+  [11,'Netherlands','Japan','Gruppespil – Runde 1'],
+  [12,'Sweden','Tunisia','Gruppespil – Runde 1'],
+  [13,'Saudi Arabia','Uruguay','Gruppespil – Runde 1'],
+  [14,'Spain','Cape Verde','Gruppespil – Runde 1'],
+  [15,'IR Iran','New Zealand','Gruppespil – Runde 1'],
+  [16,'Belgium','Egypt','Gruppespil – Runde 1'],
+  [17,'France','Senegal','Gruppespil – Runde 1'],
+  [18,'Iraq','Norway','Gruppespil – Runde 1'],
+  [19,'Argentina','Algeria','Gruppespil – Runde 1'],
+  [20,'Austria','Jordan','Gruppespil – Runde 1'],
+  [21,'Ghana','Panama','Gruppespil – Runde 1'],
+  [22,'England','Croatia','Gruppespil – Runde 1'],
+  [23,'Portugal','DR Congo','Gruppespil – Runde 1'],
+  [24,'Uzbekistan','Colombia','Gruppespil – Runde 1'],
+  [25,'Czech Rep.','South Africa','Gruppespil – Runde 2'],
+  [26,'Switzerland','Bosnia/Herzeg.','Gruppespil – Runde 2'],
+  [27,'Canada','Qatar','Gruppespil – Runde 2'],
+  [28,'Mexico','Rep. of Korea','Gruppespil – Runde 2'],
+  [29,'Brazil','Haiti','Gruppespil – Runde 2'],
+  [30,'Scotland','Morocco','Gruppespil – Runde 2'],
+  [31,'Turkey','Paraguay','Gruppespil – Runde 2'],
+  [32,'USA','Australia','Gruppespil – Runde 2'],
+  [33,'Germany','Ivory Coast','Gruppespil – Runde 2'],
+  [34,'Ecuador','Curaçao','Gruppespil – Runde 2'],
+  [35,'Netherlands','Sweden','Gruppespil – Runde 2'],
+  [36,'Tunisia','Japan','Gruppespil – Runde 2'],
+  [37,'Uruguay','Cape Verde','Gruppespil – Runde 2'],
+  [38,'Spain','Saudi Arabia','Gruppespil – Runde 2'],
+  [39,'Belgium','IR Iran','Gruppespil – Runde 2'],
+  [40,'New Zealand','Egypt','Gruppespil – Runde 2'],
+  [41,'Norway','Senegal','Gruppespil – Runde 2'],
+  [42,'France','Iraq','Gruppespil – Runde 2'],
+  [43,'Argentina','Austria','Gruppespil – Runde 2'],
+  [44,'Jordan','Algeria','Gruppespil – Runde 2'],
+  [45,'England','Ghana','Gruppespil – Runde 2'],
+  [46,'Panama','Croatia','Gruppespil – Runde 2'],
+  [47,'Portugal','Uzbekistan','Gruppespil – Runde 2'],
+  [48,'Colombia','DR Congo','Gruppespil – Runde 2'],
+  [49,'Scotland','Brazil','Gruppespil – Runde 3'],
+  [50,'Morocco','Haiti','Gruppespil – Runde 3'],
+  [51,'Switzerland','Canada','Gruppespil – Runde 3'],
+  [52,'Bosnia/Herzeg.','Qatar','Gruppespil – Runde 3'],
+  [53,'Czech Rep.','Mexico','Gruppespil – Runde 3'],
+  [54,'South Africa','Rep. of Korea','Gruppespil – Runde 3'],
+  [55,'Curaçao','Ivory Coast','Gruppespil – Runde 3'],
+  [56,'Ecuador','Germany','Gruppespil – Runde 3'],
+  [57,'Japan','Sweden','Gruppespil – Runde 3'],
+  [58,'Tunisia','Netherlands','Gruppespil – Runde 3'],
+  [59,'Turkey','USA','Gruppespil – Runde 3'],
+  [60,'Paraguay','Australia','Gruppespil – Runde 3'],
+  [61,'Norway','France','Gruppespil – Runde 3'],
+  [62,'Senegal','Iraq','Gruppespil – Runde 3'],
+  [63,'Egypt','IR Iran','Gruppespil – Runde 3'],
+  [64,'New Zealand','Belgium','Gruppespil – Runde 3'],
+  [65,'Cape Verde','Saudi Arabia','Gruppespil – Runde 3'],
+  [66,'Uruguay','Spain','Gruppespil – Runde 3'],
+  [67,'Panama','England','Gruppespil – Runde 3'],
+  [68,'Croatia','Ghana','Gruppespil – Runde 3'],
+  [69,'Algeria','Austria','Gruppespil – Runde 3'],
+  [70,'Jordan','Argentina','Gruppespil – Runde 3'],
+  [71,'Colombia','Portugal','Gruppespil – Runde 3'],
+  [72,'DR Congo','Uzbekistan','Gruppespil – Runde 3'],
+  [73,'Rep. of Korea','Canada','Runde af 32'],
+  [74,'Germany','Brazil','Runde af 32'],
+  [75,'Japan','Morocco','Runde af 32'],
+  [76,'Scotland','Netherlands','Runde af 32'],
+  [77,'Vinder I','3. plads CDFGH','Runde af 32'],
+  [78,'Vinder E','3. plads ABCDF','Runde af 32'],
+  [79,'Vinder A','3. plads CEFHI','Runde af 32'],
+  [80,'Vinder L','3. plads EHIJK','Runde af 32'],
+  [81,'USA','Qatar','Runde af 32'],
+  [82,'Vinder G','3. plads AEHIJ','Runde af 32'],
+  [83,'Vinder K','Vinder L','Runde af 32'],
+  [84,'Vinder H','Vinder J','Runde af 32'],
+  [85,'Vinder B','3. plads EFGIJ','Runde af 32'],
+  [86,'Vinder J','Vinder H','Runde af 32'],
+  [87,'Vinder K','3. plads DEIJL','Runde af 32'],
+  [88,'Vinder D','Vinder G','Runde af 32'],
+  [89,'W73','W77','Runde af 16'],[90,'W73','W75','Runde af 16'],
+  [91,'W76','W78','Runde af 16'],[92,'W79','W80','Runde af 16'],
+  [93,'W83','W84','Runde af 16'],[94,'W81','W82','Runde af 16'],
+  [95,'W86','W88','Runde af 16'],[96,'W85','W87','Runde af 16'],
+  [97,'W89','W90','Kvartfinale'],[98,'W93','W94','Kvartfinale'],
+  [99,'W91','W92','Kvartfinale'],[100,'W95','W96','Kvartfinale'],
+  [101,'W97','W98','Semifinale'],[102,'W99','W100','Semifinale'],
+  [103,'Tab. SF1','Tab. SF2','3. plads'],[104,'W101','W102','FINALE'],
+];
+
+let state = {participants:[], tips:{}, results:{}, live:{}, filter:'all'};
+
+const sbHeaders = {
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'apikey': SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+};
+
+async function loadState() {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.shared&select=*`, {headers: sbHeaders});
+  const d = await r.json();
+  if (d[0]?.data) state = Object.assign(state, JSON.parse(d[0].data));
+}
+
+async function saveState() {
+  await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence`, {
+    method: 'POST',
+    headers: {...sbHeaders, 'Prefer': 'resolution=merge-duplicates'},
+    body: JSON.stringify({id:'shared', data: JSON.stringify(state), updated_at: new Date().toISOString()})
+  });
+}
+
+function calcTip(s1, s2) {
+  if (s1 > s2) return '1';
+  if (s1 === s2) return 'X';
+  return '2';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('match-rows');
+  let html = '';
+  let lastSection = '';
+
+  MATCHES.forEach(([num, t1, t2, section]) => {
+    if (section !== lastSection) {
+      lastSection = section;
+      html += `<tr><td colspan="6" class="section">${section}</td></tr>`;
+    }
+    const res = state.results[String(num)] || '';
+    const live = state.live[num] || {};
+    const score = live.score || '';
+    const parts = score ? score.split('–') : ['', ''];
+    const s1 = parts[0] || '';
+    const s2 = parts[1] || '';
+    const tipVal = res ? `<span class="tip-badge tip-${res.toLowerCase()}">${res}</span>` : '–';
+
+    html += `<tr>
+      <td style="font-weight:700;color:#1a2d3d">${num}</td>
+      <td>${t1}</td>
+      <td style="text-align:center">
+        <input class="score-inp" id="s1-${num}" value="${s1}" placeholder="–" type="number" min="0" max="20">
+        <span class="sep">–</span>
+        <input class="score-inp" id="s2-${num}" value="${s2}" placeholder="–" type="number" min="0" max="20">
+      </td>
+      <td>${t2}</td>
+      <td style="text-align:center">${tipVal}</td>
+      <td><button class="save-btn" onclick="saveMatch(${num})">Gem</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+async function saveMatch(num) {
+  const s1inp = document.getElementById(`s1-${num}`).value;
+  const s2inp = document.getElementById(`s2-${num}`).value;
+  const btn = document.querySelector(`button[onclick="saveMatch(${num})"]`);
+
+  if (s1inp === '' || s2inp === '') {
+    // Slet resultat
+    delete state.results[String(num)];
+    delete state.live[num];
+  } else {
+    const s1 = parseInt(s1inp);
+    const s2 = parseInt(s2inp);
+    const t = calcTip(s1, s2);
+    state.results[String(num)] = t;
+    state.live[num] = {score: `${s1}–${s2}`};
+  }
+
+  try {
+    btn.textContent = '...';
+    btn.disabled = true;
+    await saveState();
+    btn.textContent = '✓';
+    btn.className = 'save-btn saved';
+    showStatus('ok', `Kamp ${num} gemt i Supabase`);
+    setTimeout(() => { btn.textContent = 'Gem'; btn.className = 'save-btn'; btn.disabled = false; }, 2000);
+    renderTable();
+  } catch(e) {
+    showStatus('err', 'Fejl: ' + e.message);
+    btn.textContent = 'Gem';
+    btn.disabled = false;
+  }
+}
+
+async function saveAllVisible() {
+  // Gem alle kampe der har scores udfyldt
+  let count = 0;
+  for (const [num] of MATCHES) {
+    const s1inp = document.getElementById(`s1-${num}`)?.value;
+    const s2inp = document.getElementById(`s2-${num}`)?.value;
+    if (s1inp !== '' && s2inp !== '') {
+      const s1 = parseInt(s1inp), s2 = parseInt(s2inp);
+      state.results[String(num)] = calcTip(s1, s2);
+      state.live[num] = {score: `${s1}–${s2}`};
+      count++;
+    }
+  }
+  await saveState();
+  showStatus('ok', `${count} resultater gemt`);
+  renderTable();
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.textContent = msg;
+  setTimeout(() => el.style.display = 'none', 4000);
+}
+
+// Init
+loadState().then(() => renderTable());
+</script>
+</body>
+</html>
