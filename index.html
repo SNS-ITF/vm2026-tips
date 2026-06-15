@@ -265,9 +265,15 @@ async function fetchLive(manual){
   });
 
   save();
-  const ts=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
-  setSyncStatus('ok',`Opdateret kl. ${ts} – ${updated} nye resultater`);
+  // Brug opdateringstidspunkt fra data.json hvis tilgængeligt
+  const dataTs=data.updated?new Date(data.updated).toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Copenhagen'}):'';
+  const fetchTs=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+  const tsLabel=dataTs?`Data fra kl. ${dataTs} – hentet kl. ${fetchTs}`:`Hentet kl. ${fetchTs}`;
+  S.lastSyncMsg=tsLabel;
+  S.lastSyncCount=data.count||0;
   renderTips();renderStilling();
+  // setSyncStatus EFTER render så elementerne eksisterer i DOM
+  setSyncStatus('ok',`✓ ${tsLabel} (${data.count} resultater)`);
   busy=false;
 }
 
@@ -318,7 +324,7 @@ function renderTips(){
   const filters=[['all','Alle'],['Gruppespil – Runde 1','Runde 1'],['Gruppespil – Runde 2','Runde 2'],['Gruppespil – Runde 3','Runde 3'],['Runde af 32','R32'],['Runde af 16','R16'],['Kvartfinale','QF'],['Semifinale','SF'],['FINALE','Finale']];
   let h=`<div class="fbar">`;
   filters.forEach(([v,l])=>h+=`<button class="fb${S.filter===v?' active':''}" onclick="setFilter('${v}')">${l}</button>`);
-  h+=`<div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Henter resultater…</span></div></div>`;
+  h+=`<div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Indlæser…</span></div></div>`;
   h+=`<div id="fst" class="fst"></div>`;
   h+=`<div class="sw"><table><thead><tr>
     <th style="width:36px">#</th><th style="width:90px">Dato</th>
