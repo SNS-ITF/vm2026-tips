@@ -1,28 +1,53 @@
-import urllib.request
-import json
-import sys
+"""
+VM 2026 – Opdater kampresultater
+Kører via GitHub Actions hver 30. minut.
+Kendte resultater hardkodet, fremtidige kampe tilføjes løbende.
+"""
+import json, sys
+from datetime import datetime, timezone
 
-URL = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json'
+def tip(s1, s2):
+    if s1 > s2: return '1'
+    if s1 == s2: return 'X'
+    return '2'
 
-try:
-    with urllib.request.urlopen(URL, timeout=15) as r:
-        raw = json.loads(r.read().decode())
-except Exception as e:
-    print(f"Fejl ved hentning: {e}", file=sys.stderr)
-    sys.exit(1)
+# Alle spillede resultater – opdateres manuelt i denne fil efterhånden
+# Format: kamp_nummer: (score_hjemme, score_ude)
+RESULTS = {
+    # --- 11. juni ---
+    1:  (2, 0),   # Mexico 2-0 South Africa
+    # --- 12. juni ---
+    2:  (2, 1),   # Rep. of Korea 2-1 Czech Rep.
+    3:  (1, 1),   # Canada 1-1 Bosnia/Herzeg.
+    4:  (4, 1),   # USA 4-1 Paraguay
+    # --- 13. juni ---
+    7:  (1, 1),   # Brazil 1-1 Morocco
+    8:  (1, 1),   # Qatar 1-1 Switzerland
+    5:  (0, 1),   # Haiti 0-1 Scotland
+    6:  (2, 0),   # Australia 2-0 Turkey
+    # --- 14. juni ---
+    10: (7, 1),   # Germany 7-1 Curaçao
+    11: (2, 2),   # Netherlands 2-2 Japan
+    9:  (1, 0),   # Ivory Coast 1-0 Ecuador
+    12: (5, 1),   # Sweden 5-1 Tunisia
+    # --- 15. juni (aften endnu ikke spillet) ---
+    # 14: Spain vs Cape Verde
+    # 16: Belgium vs Egypt
+    # 13: Saudi Arabia vs Uruguay
+    # 15: IR Iran vs New Zealand
+}
 
-# Byg simpel lookup: match_num -> {score, tip}
 results = {}
-for rnd in raw.get('rounds', []):
-    for m in rnd.get('matches', []):
-        num = m.get('num')
-        s1  = m.get('score1')
-        s2  = m.get('score2')
-        if num and s1 is not None and s2 is not None:
-            if   s1 > s2: tip = '1'
-            elif s1 == s2: tip = 'X'
-            else:          tip = '2'
-            results[str(num)] = {'score': f'{s1}–{s2}', 'tip': tip}
+for num, (s1, s2) in RESULTS.items():
+    results[str(num)] = {
+        'score': f'{s1}–{s2}',
+        'tip': tip(s1, s2)
+    }
 
-out = {'results': results, 'source': 'openfootball/worldcup.json'}
+out = {
+    'results': results,
+    'updated': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    'count': len(results)
+}
+
 print(json.dumps(out, ensure_ascii=False, indent=2))
