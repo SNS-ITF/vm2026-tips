@@ -205,7 +205,13 @@ const M=[
 ];
 
 const STORE='vm2026_tips_v1';
-const RAW='https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+// jsDelivr er et globalt CDN der server GitHub-filer med korrekte CORS-headers
+// raw.githubusercontent.com bruges som fallback
+const URLS=[
+  'https://cdn.jsdelivr.net/gh/openfootball/worldcup.json@master/2026/worldcup.json',
+  'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json',
+  'https://api.allorigins.win/raw?url=https%3A%2F%2Fraw.githubusercontent.com%2Fopenfootball%2Fworldcup.json%2Fmaster%2F2026%2Fworldcup.json',
+];
 
 let S={participants:[],tips:{},results:{},live:{},filter:'all'};
 let busy=false;
@@ -236,15 +242,8 @@ async function fetchLive(){
   btn.disabled=true;btn.innerHTML='<span class="spin">↻</span> Henter…';
   st.className='fst';st.textContent='';
 
-  const proxies=[
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(RAW)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(RAW)}`,
-    `https://corsproxy.io/?url=${encodeURIComponent(RAW)}`,
-    RAW,
-  ];
-
   let data=null,lastErr='';
-  for(const url of proxies){
+  for(const url of URLS){
     try{
       const r=await fetch(url,{cache:'no-cache'});
       if(!r.ok)throw new Error('HTTP '+r.status);
