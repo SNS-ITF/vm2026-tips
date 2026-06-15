@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VM 2026 – Tipskonkurrence</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;min-height:100vh}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+.hdr{background:#1A2D3D;color:#fff;padding:16px 20px;border-radius:12px 12px 0 0;display:flex;align-items:center;gap:12px}
+.hdr h1{font-size:18px;font-weight:600}
+.hdr .sub{font-size:12px;color:#aec6d8;margin-top:2px}
+.tabs{display:flex;border-bottom:1px solid #ddd;background:#f8f9fa;padding:0 12px}
+.tab{padding:11px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#666;white-space:nowrap;user-select:none}
+.tab.active{border-bottom-color:#F0830C;color:#1a2d3d;font-weight:600}
+.card{background:#fff;border-radius:0 0 12px 12px;border:1px solid #ddd;border-top:none}
+.body{padding:16px}
+/* Stilling */
+.scard{border:1px solid #ddd;border-radius:10px;overflow:hidden;margin-bottom:14px}
+.shdr{background:#1A2D3D;color:#fff;padding:10px 16px;font-size:13px;font-weight:600;display:grid;grid-template-columns:40px 1fr 64px 64px 64px;gap:8px}
+.srow{display:grid;grid-template-columns:40px 1fr 64px 64px 64px;gap:8px;padding:10px 16px;border-bottom:1px solid #eee;align-items:center;font-size:13px}
+.srow:last-child{border-bottom:none}
+.srow.gold{background:#FFFBEA}.srow.silver{background:#F9F9F9}.srow.bronze{background:#FDF5EE}
+.pts{text-align:center;font-weight:700;font-size:16px;color:#1a2d3d}
+.cnt{text-align:center;font-size:12px;color:#888}
+/* Tipsark */
+.fbar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.fb{padding:5px 12px;font-size:12px;border:1px solid #ccc;border-radius:20px;cursor:pointer;background:#fff;color:#555}
+.fb:hover{background:#f0f0f0}
+.fb.active{background:#1A2D3D;color:#fff;border-color:#1A2D3D}
+.hbtn{padding:8px 16px;background:#1A2D3D;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:7px;margin-left:auto;white-space:nowrap}
+.hbtn:hover{background:#243d52}
+.hbtn:disabled{opacity:.5;cursor:not-allowed}
+.fst{font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:10px;display:none}
+.fst.ok{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;display:block}
+.fst.err{background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;display:block}
+.sw{overflow-x:auto;border-radius:10px;border:1px solid #ddd}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#1A2D3D;color:#fff;padding:8px 8px;text-align:left;font-weight:600;position:sticky;top:0;z-index:2;white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid #eee;vertical-align:middle}
+tr:nth-child(even) td{background:#fafafa}
+tr:hover td{background:#f0f4f8}
+input.ti{width:46px;padding:3px 4px;font-size:12px;text-align:center;border:1px solid #ccc;border-radius:4px;background:#fff}
+input.ti:focus{outline:none;border-color:#F0830C;box-shadow:0 0 0 2px #F0830C33}
+input.ri{width:46px;padding:3px 4px;font-size:12px;text-align:center;border:2px solid #2E7D32;border-radius:4px;background:#F1F8F1;font-weight:600;color:#1a2d3d}
+input.ri:focus{outline:none;border-color:#1a2d3d}
+.hit{background:#C8E6C9!important;color:#1B5E20;font-weight:700}
+.miss{color:#bbb}
+.sec td{background:#1A2D3D!important;color:#fff;font-weight:600;padding:6px 8px;font-size:11px;letter-spacing:.05em}
+.sp{font-size:10px;padding:1px 5px;border-radius:6px;background:#eee;color:#666;white-space:nowrap;margin-top:1px}
+/* Setup */
+.sbox{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px}
+.sbox h3{font-size:14px;font-weight:600;margin-bottom:10px;color:#1a2d3d}
+.ptag{display:inline-flex;align-items:center;gap:6px;background:#f0f2f5;border:1px solid #ddd;border-radius:20px;padding:4px 10px 4px 8px;margin:3px;font-size:13px}
+.ptag button{border:none;background:none;color:#999;cursor:pointer;font-size:16px;line-height:1;padding:0 0 0 2px}
+.ptag button:hover{color:#c62828}
+.add-row{display:flex;gap:8px;margin-top:10px}
+.add-row input{flex:1;padding:8px 12px;border:1px solid #ccc;border-radius:8px;font-size:13px}
+.add-row button{padding:8px 16px;background:#F0830C;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+.add-row button:hover{background:#d6730a}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.badge-o{background:#FEF0E0;color:#C05A00}
+.badge-g{background:#E8F5E9;color:#2E7D32}
+.info-box{background:#E3F2FD;border:1px solid #90CAF9;border-radius:8px;padding:12px;font-size:13px;color:#1565C0;line-height:1.6;margin-bottom:12px}
+.danger-btn{margin-top:12px;padding:7px 14px;background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600}
+.danger-btn:hover{background:#FFCDD2}
+.savebar{position:fixed;bottom:20px;right:20px;background:#2E7D32;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;display:none;z-index:100;box-shadow:0 2px 8px #0003}
+.statbar{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{background:#f8f9fa;border:1px solid #eee;border-radius:10px;padding:12px;text-align:center}
+.stat-lbl{font-size:11px;color:#888;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:700}
+.spin{display:inline-block;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hdr">
+  <span style="font-size:26px">🏆</span>
+  <div><div class="hdr h1" style="font-size:18px;font-weight:600">VM 2026 – Tipskonkurrence</div><div class="sub">Canada · Mexico · USA &nbsp;|&nbsp; 104 kampe</div></div>
+  <div id="sts" style="margin-left:auto;font-size:11px;color:#aec6d8;text-align:right"></div>
+</div>
+<div class="card">
+<div class="tabs">
+  <div class="tab active" onclick="showTab('stilling')">🏆 Stilling</div>
+  <div class="tab" onclick="showTab('tips')">⚽ Tipsark</div>
+  <div class="tab" onclick="showTab('setup')">👥 Deltagere</div>
+</div>
+<div class="body">
+  <div id="savebar" class="savebar">✓ Gemt</div>
+  <div id="t-stilling"></div>
+  <div id="t-tips" style="display:none"></div>
+  <div id="t-setup" style="display:none"></div>
+</div>
+</div>
+</div>
+
+<script>
+const M=[
+[1,'Mexico','South Africa','11-jun 23:00','Gruppespil – Runde 1'],
+[2,'Rep. of Korea','Czech Rep.','12-jun 06:00','Gruppespil – Runde 1'],
+[3,'Canada','Bosnia/Herzeg.','12-jun 23:00','Gruppespil – Runde 1'],
+[4,'USA','Paraguay','13-jun 05:00','Gruppespil – Runde 1'],
+[5,'Haiti','Scotland','14-jun 05:00','Gruppespil – Runde 1'],
+[6,'Australia','Turkey','14-jun 08:00','Gruppespil – Runde 1'],
+[7,'Brazil','Morocco','14-jun 02:00','Gruppespil – Runde 1'],
+[8,'Qatar','Switzerland','13-jun 23:00','Gruppespil – Runde 1'],
+[9,'Ivory Coast','Ecuador','15-jun 03:00','Gruppespil – Runde 1'],
+[10,'Germany','Curaçao','14-jun 21:00','Gruppespil – Runde 1'],
+[11,'Netherlands','Japan','15-jun 00:00','Gruppespil – Runde 1'],
+[12,'Sweden','Tunisia','15-jun 06:00','Gruppespil – Runde 1'],
+[13,'Saudi Arabia','Uruguay','16-jun 02:00','Gruppespil – Runde 1'],
+[14,'Spain','Cape Verde','15-jun 20:00','Gruppespil – Runde 1'],
+[15,'IR Iran','New Zealand','16-jun 05:00','Gruppespil – Runde 1'],
+[16,'Belgium','Egypt','15-jun 23:00','Gruppespil – Runde 1'],
+[17,'France','Senegal','16-jun 23:00','Gruppespil – Runde 1'],
+[18,'Iraq','Norway','17-jun 02:00','Gruppespil – Runde 1'],
+[19,'Argentina','Algeria','17-jun 05:00','Gruppespil – Runde 1'],
+[20,'Austria','Jordan','17-jun 08:00','Gruppespil – Runde 1'],
+[21,'Ghana','Panama','18-jun 03:00','Gruppespil – Runde 1'],
+[22,'England','Croatia','17-jun 00:00','Gruppespil – Runde 1'],
+[23,'Portugal','DR Congo','17-jun 21:00','Gruppespil – Runde 1'],
+[24,'Uzbekistan','Colombia','18-jun 06:00','Gruppespil – Runde 1'],
+[25,'Czech Rep.','South Africa','18-jun 20:00','Gruppespil – Runde 2'],
+[26,'Switzerland','Bosnia/Herzeg.','18-jun 23:00','Gruppespil – Runde 2'],
+[27,'Canada','Qatar','19-jun 02:00','Gruppespil – Runde 2'],
+[28,'Mexico','Rep. of Korea','19-jun 05:00','Gruppespil – Runde 2'],
+[29,'Brazil','Haiti','20-jun 04:30','Gruppespil – Runde 2'],
+[30,'Scotland','Morocco','20-jun 02:00','Gruppespil – Runde 2'],
+[31,'Turkey','Paraguay','20-jun 07:00','Gruppespil – Runde 2'],
+[32,'USA','Australia','19-jun 23:00','Gruppespil – Runde 2'],
+[33,'Germany','Ivory Coast','21-jun 00:00','Gruppespil – Runde 2'],
+[34,'Ecuador','Curaçao','21-jun 04:00','Gruppespil – Runde 2'],
+[35,'Netherlands','Sweden','20-jun 21:00','Gruppespil – Runde 2'],
+[36,'Tunisia','Japan','21-jun 08:00','Gruppespil – Runde 2'],
+[37,'Uruguay','Cape Verde','22-jun 02:00','Gruppespil – Runde 2'],
+[38,'Spain','Saudi Arabia','21-jun 20:00','Gruppespil – Runde 2'],
+[39,'Belgium','IR Iran','21-jun 23:00','Gruppespil – Runde 2'],
+[40,'New Zealand','Egypt','22-jun 05:00','Gruppespil – Runde 2'],
+[41,'Norway','Senegal','23-jun 04:00','Gruppespil – Runde 2'],
+[42,'France','Iraq','23-jun 01:00','Gruppespil – Runde 2'],
+[43,'Argentina','Austria','22-jun 21:00','Gruppespil – Runde 2'],
+[44,'Jordan','Algeria','23-jun 07:00','Gruppespil – Runde 2'],
+[45,'England','Ghana','24-jun 00:00','Gruppespil – Runde 2'],
+[46,'Panama','Croatia','24-jun 03:00','Gruppespil – Runde 2'],
+[47,'Portugal','Uzbekistan','23-jun 21:00','Gruppespil – Runde 2'],
+[48,'Colombia','DR Congo','24-jun 06:00','Gruppespil – Runde 2'],
+[49,'Scotland','Brazil','25-jun 02:00','Gruppespil – Runde 3'],
+[50,'Morocco','Haiti','25-jun 02:00','Gruppespil – Runde 3'],
+[51,'Switzerland','Canada','24-jun 23:00','Gruppespil – Runde 3'],
+[52,'Bosnia/Herzeg.','Qatar','24-jun 23:00','Gruppespil – Runde 3'],
+[53,'Czech Rep.','Mexico','25-jun 05:00','Gruppespil – Runde 3'],
+[54,'South Africa','Rep. of Korea','25-jun 05:00','Gruppespil – Runde 3'],
+[55,'Curaçao','Ivory Coast','26-jun 00:00','Gruppespil – Runde 3'],
+[56,'Ecuador','Germany','26-jun 00:00','Gruppespil – Runde 3'],
+[57,'Japan','Sweden','26-jun 03:00','Gruppespil – Runde 3'],
+[58,'Tunisia','Netherlands','26-jun 03:00','Gruppespil – Runde 3'],
+[59,'Turkey','USA','26-jun 06:00','Gruppespil – Runde 3'],
+[60,'Paraguay','Australia','26-jun 06:00','Gruppespil – Runde 3'],
+[61,'Norway','France','26-jun 23:00','Gruppespil – Runde 3'],
+[62,'Senegal','Iraq','26-jun 23:00','Gruppespil – Runde 3'],
+[63,'Egypt','IR Iran','27-jun 04:00','Gruppespil – Runde 3'],
+[64,'New Zealand','Belgium','27-jun 04:00','Gruppespil – Runde 3'],
+[65,'Cape Verde','Saudi Arabia','27-jun 04:00','Gruppespil – Runde 3'],
+[66,'Uruguay','Spain','27-jun 04:00','Gruppespil – Runde 3'],
+[67,'Panama','England','27-jun 01:00','Gruppespil – Runde 3'],
+[68,'Croatia','Ghana','27-jun 01:00','Gruppespil – Runde 3'],
+[69,'Algeria','Austria','27-jun 06:00','Gruppespil – Runde 3'],
+[70,'Jordan','Argentina','27-jun 07:00','Gruppespil – Runde 3'],
+[71,'Colombia','Portugal','27-jun 03:00','Gruppespil – Runde 3'],
+[72,'DR Congo','Uzbekistan','27-jun 06:00','Gruppespil – Runde 3'],
+[73,'Rep. of Korea','Canada','28-jun','Runde af 32'],
+[74,'Germany','Brazil','28-jun','Runde af 32'],
+[75,'Japan','Morocco','28-jun','Runde af 32'],
+[76,'Scotland','Netherlands','28-jun','Runde af 32'],
+[77,'Vinder I','3. plads CDFGH','29-jun','Runde af 32'],
+[78,'Vinder E','3. plads ABCDF','29-jun','Runde af 32'],
+[79,'Vinder A','3. plads CEFHI','29-jun','Runde af 32'],
+[80,'Vinder L','3. plads EHIJK','29-jun','Runde af 32'],
+[81,'USA','Qatar','29-jun','Runde af 32'],
+[82,'Vinder G','3. plads AEHIJ','30-jun','Runde af 32'],
+[83,'Vinder K','Vinder L','30-jun','Runde af 32'],
+[84,'Vinder H','Vinder J','30-jun','Runde af 32'],
+[85,'Vinder B','3. plads EFGIJ','30-jun','Runde af 32'],
+[86,'Vinder J','Vinder H','01-jul','Runde af 32'],
+[87,'Vinder K','3. plads DEIJL','01-jul','Runde af 32'],
+[88,'Vinder D','Vinder G','01-jul','Runde af 32'],
+[89,'W73','W77','03-jul','Runde af 16'],
+[90,'W73','W75','03-jul','Runde af 16'],
+[91,'W76','W78','04-jul','Runde af 16'],
+[92,'W79','W80','04-jul','Runde af 16'],
+[93,'W83','W84','05-jul','Runde af 16'],
+[94,'W81','W82','05-jul','Runde af 16'],
+[95,'W86','W88','06-jul','Runde af 16'],
+[96,'W85','W87','06-jul','Runde af 16'],
+[97,'W89','W90','10-jul','Kvartfinale'],
+[98,'W93','W94','11-jul','Kvartfinale'],
+[99,'W91','W92','12-jul','Kvartfinale'],
+[100,'W95','W96','12-jul','Kvartfinale'],
+[101,'W97','W98','15-jul','Semifinale'],
+[102,'W99','W100','16-jul','Semifinale'],
+[103,'Tab. SF1','Tab. SF2','19-jul','Kamp om 3. plads'],
+[104,'W101','W102','19-jul','FINALE'],
+];
+
+const STORE='vm2026_tips_v1';
+const RAW='https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+
+let S={participants:[],tips:{},results:{},live:{},filter:'all'};
+let busy=false;
+
+function load(){
+  try{const d=localStorage.getItem(STORE);if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
+  render();
+}
+
+function save(){
+  try{
+    localStorage.setItem(STORE,JSON.stringify(S));
+    const b=document.getElementById('savebar');b.style.display='block';
+    const n=new Date();document.getElementById('sts').textContent='Gemt '+n.getHours()+':'+String(n.getMinutes()).padStart(2,'0');
+    setTimeout(()=>b.style.display='none',2000);
+  }catch(e){}
+}
+
+function tip(s1,s2){
+  if(s1==null||s2==null)return '';
+  return s1>s2?'1':s1===s2?'X':'2';
+}
+
+async function fetchLive(){
+  if(busy)return;busy=true;
+  const btn=document.getElementById('hbtn');
+  const st=document.getElementById('fst');
+  btn.disabled=true;btn.innerHTML='<span class="spin">↻</span> Henter…';
+  st.className='fst';st.textContent='';
+
+  const proxies=[
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(RAW)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(RAW)}`,
+    `https://corsproxy.io/?url=${encodeURIComponent(RAW)}`,
+    RAW,
+  ];
+
+  let data=null,lastErr='';
+  for(const url of proxies){
+    try{
+      const r=await fetch(url,{cache:'no-cache'});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const txt=await r.text();
+      let j;
+      try{j=JSON.parse(txt);}catch{
+        const w=JSON.parse(txt);j=JSON.parse(w.contents||w.body||'{}');
+      }
+      if(j&&j.rounds){data=j;break;}
+    }catch(e){lastErr=e.message;}
+  }
+
+  if(!data){
+    st.className='fst err';
+    st.innerHTML='<strong>Kunne ikke hente data.</strong> '+lastErr+
+      '<br><small>Mulig årsag: Netværket tillader ikke eksterne kald. Prøv igen om et øjeblik.</small>';
+    busy=false;btn.disabled=false;btn.innerHTML='⟳ Hent resultater online';return;
+  }
+
+  let updated=0,unchanged=0;
+  data.rounds.forEach(round=>{
+    (round.matches||[]).forEach(m=>{
+      if(!m.num)return;
+      const t=tip(m.score1,m.score2);
+      if(t){
+        S.live[m.num]={s1:m.score1,s2:m.score2,score:`${m.score1}–${m.score2}`};
+        if(S.results[m.num]!==t){S.results[m.num]=t;updated++;}else unchanged++;
+      }
+    });
+  });
+
+  save();
+  const ts=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
+  st.className='fst ok';
+  st.textContent=`✓ Hentet kl. ${ts} – ${updated} nye, ${unchanged} uændrede resultater. Kilde: openfootball/worldcup.json`;
+  renderTips();renderStilling();
+  busy=false;btn.disabled=false;btn.innerHTML='⟳ Hent resultater online';
+}
+
+function showTab(t){
+  ['stilling','tips','setup'].forEach(x=>document.getElementById('t-'+x).style.display=x===t?'block':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['stilling','tips','setup'][i]===t));
+  if(t==='stilling')renderStilling();
+  if(t==='tips')renderTips();
+  if(t==='setup')renderSetup();
+}
+
+function scores(){
+  const sc={};
+  S.participants.forEach(p=>{
+    let pts=0,correct=0,entered=0;
+    M.forEach(m=>{const t=(S.tips[p]||{})[m[0]];const r=S.results[m[0]];if(t)entered++;if(t&&r&&t===r){pts++;correct++;}});
+    sc[p]={pts,correct,entered};
+  });
+  return sc;
+}
+
+function renderStilling(){
+  const el=document.getElementById('t-stilling');
+  if(!S.participants.length){
+    el.innerHTML='<div style="text-align:center;padding:48px;color:#888"><div style="font-size:48px">👥</div><div style="margin-top:10px;font-size:15px">Tilføj deltagere under "Deltagere"</div></div>';return;
+  }
+  const sc=scores();
+  const sorted=[...S.participants].sort((a,b)=>sc[b].pts-sc[a].pts);
+  const medals=['🥇','🥈','🥉'];const cls=['gold','silver','bronze'];
+  const played=M.filter(m=>S.results[m[0]]).length;
+  const lc=Object.keys(S.live).length;
+  el.innerHTML=`
+  <div class="statbar">
+    <div class="stat"><div class="stat-lbl">Kampe spillet</div><div class="stat-val">${played}/104</div></div>
+    <div class="stat"><div class="stat-lbl">Deltagere</div><div class="stat-val">${S.participants.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Leder</div><div class="stat-val" style="font-size:15px;color:#F0830C">${sorted[0]||'–'}</div></div>
+  </div>
+  ${lc?`<div style="font-size:12px;color:#2E7D32;margin-bottom:12px;padding:8px 12px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7">📡 ${lc} resultater hentet online – senest synkroniseret ved sidste klik</div>`:''}
+  <div class="scard">
+    <div class="shdr"><div></div><div>Deltager</div><div style="text-align:center">Point</div><div style="text-align:center">Rigtige</div><div style="text-align:center">Tipset</div></div>
+    ${sorted.map((p,i)=>`<div class="srow ${cls[i]||''}"><div style="text-align:center;font-size:18px">${medals[i]||i+1}</div><div style="font-weight:${i<3?700:400}">${p}</div><div class="pts">${sc[p].pts}</div><div class="cnt">${sc[p].correct}</div><div class="cnt">${sc[p].entered}</div></div>`).join('')}
+  </div>`;
+}
+
+function renderTips(){
+  const el=document.getElementById('t-tips');
+  if(!S.participants.length){el.innerHTML='<div style="text-align:center;padding:48px;color:#888">Tilføj deltagere under "Deltagere" for at begynde</div>';return;}
+  const filters=[['all','Alle'],['Gruppespil – Runde 1','Runde 1'],['Gruppespil – Runde 2','Runde 2'],['Gruppespil – Runde 3','Runde 3'],['Runde af 32','R32'],['Runde af 16','R16'],['Kvartfinale','QF'],['Semifinale','SF'],['FINALE','Finale']];
+  let h=`<div class="fbar">`;
+  filters.forEach(([v,l])=>h+=`<button class="fb${S.filter===v?' active':''}" onclick="setFilter('${v}')">${l}</button>`);
+  h+=`<button class="hbtn" id="hbtn" onclick="fetchLive()">⟳ Hent resultater online</button></div>`;
+  h+=`<div id="fst" class="fst"></div>`;
+  h+=`<div class="sw"><table><thead><tr>
+    <th style="width:36px">#</th><th style="width:90px">Dato</th>
+    <th>Hjemmehold</th><th style="width:18px"></th><th>Udehold</th>
+    <th style="text-align:center;width:76px;background:#2E7D32">Resultat</th>`;
+  S.participants.forEach(p=>h+=`<th style="text-align:center;width:52px;max-width:52px;overflow:hidden;text-overflow:ellipsis">${p.split(' ')[0]}</th>`);
+  h+=`</tr></thead><tbody>`;
+  let lastSec='';
+  const filtered=S.filter==='all'?M:M.filter(m=>m[4]===S.filter);
+  filtered.forEach(m=>{
+    if(m[4]!==lastSec){lastSec=m[4];h+=`<tr class="sec"><td colspan="${6+S.participants.length}">${m[4]}</td></tr>`;}
+    const res=S.results[m[0]]||'';
+    const lv=S.live[m[0]];
+    h+=`<tr>
+      <td style="text-align:center;font-weight:700;color:#1a2d3d">${m[0]}</td>
+      <td style="font-size:11px;color:#888;white-space:nowrap">${m[3]}</td>
+      <td>${m[1]}</td><td style="text-align:center;color:#ccc">–</td><td>${m[2]}</td>
+      <td style="text-align:center"><div style="display:flex;flex-direction:column;align-items:center;gap:1px">
+        <input class="ri" data-m="${m[0]}" value="${res}" placeholder="1/X/2" oninput="setRes(this)">
+        ${lv?`<span class="sp">${lv.score}</span>`:''}
+      </div></td>`;
+    S.participants.forEach(p=>{
+      const t=(S.tips[p]||{})[m[0]]||'';
+      const hit=res&&t&&t===res,miss=res&&t&&t!==res;
+      h+=`<td style="text-align:center"><input class="ti${hit?' hit':miss?' miss':''}" data-m="${m[0]}" data-p="${encodeURIComponent(p)}" value="${t}" placeholder="?" oninput="setTip(this)"></td>`;
+    });
+    h+=`</tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  el.innerHTML=h;
+}
+
+function renderSetup(){
+  const el=document.getElementById('t-setup');
+  el.innerHTML=`
+  <div class="sbox">
+    <h3>Deltagere</h3>
+    <div id="ptags">${S.participants.map(p=>`<span class="ptag">👤 ${p}<button onclick="removeP('${p}')">×</button></span>`).join('')}</div>
+    <div class="add-row"><input type="text" id="nn" placeholder="Skriv navn…" onkeydown="if(event.key==='Enter')addP()"><button onclick="addP()">Tilføj</button></div>
+  </div>
+  <div class="sbox">
+    <h3>Tip-regler</h3>
+    <div style="font-size:13px;color:#555;line-height:1.9">
+      <span class="badge badge-o">1</span> Hjemmehold vinder &nbsp;
+      <span class="badge badge-o">X</span> Uafgjort &nbsp;
+      <span class="badge badge-o">2</span> Udehold vinder<br>
+      <span class="badge badge-g" style="margin-top:6px">1 point</span> for hvert korrekt tip
+    </div>
+  </div>
+  <div class="sbox">
+    <h3>Om live-opdatering</h3>
+    <div class="info-box">
+      📡 Klik på <strong>Hent resultater online</strong> i Tipsarket for at hente aktuelle kampresultater direkte fra <strong>openfootball/worldcup.json</strong> på GitHub.
+      Gratis, ingen API-nøgle. Opdateres typisk inden for minutter efter en kamp er færdig.
+    </div>
+    <h3 style="margin-top:0">Om data-lagring</h3>
+    <div style="font-size:13px;color:#555;line-height:1.7">Tips og resultater gemmes i browserens <strong>localStorage</strong> – dvs. de er kun tilgængelige på den enhed/browser du bruger siden fra. Del siden med alle deltagere så de selv kan taste deres tips ind.</div>
+    <button class="danger-btn" onclick="resetAll()">🗑 Nulstil alle data</button>
+  </div>`;
+}
+
+function setFilter(f){S.filter=f;renderTips();}
+
+function setRes(inp){
+  const m=parseInt(inp.dataset.m);const v=inp.value.toUpperCase().replace('U','X');
+  S.results[m]=v;inp.value=v;save();
+  document.querySelectorAll(`.ti[data-m="${m}"]`).forEach(t=>{
+    const tv=t.value.toUpperCase();
+    t.className='ti'+(v&&tv&&tv===v?' hit':v&&tv&&tv!==v?' miss':'');
+  });
+  renderStilling();
+}
+
+function setTip(inp){
+  const m=parseInt(inp.dataset.m);const p=decodeURIComponent(inp.dataset.p);const v=inp.value.toUpperCase().replace('U','X');
+  inp.value=v;if(!S.tips[p])S.tips[p]={};S.tips[p][m]=v;
+  const res=S.results[m]||'';
+  inp.className='ti'+(res&&v&&v===res?' hit':res&&v&&v!==res?' miss':'');
+  save();renderStilling();
+}
+
+function addP(){
+  const i=document.getElementById('nn');const n=i.value.trim();
+  if(n&&!S.participants.includes(n)){S.participants.push(n);i.value='';save();renderSetup();renderStilling();}
+}
+
+function removeP(p){
+  if(!confirm('Fjern '+p+'?'))return;
+  S.participants=S.participants.filter(x=>x!==p);delete S.tips[p];save();renderSetup();renderStilling();
+}
+
+function resetAll(){
+  if(confirm('Slet ALLE tips, resultater og deltagere?\nDette kan ikke fortrydes.'))
+  {S={participants:[],tips:{},results:{},live:{},filter:'all'};save();render();}
+}
+
+function render(){renderStilling();renderSetup();}
+load();
+</script>
+</body>
+</html>
