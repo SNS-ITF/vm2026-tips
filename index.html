@@ -216,7 +216,8 @@ const sb = {
     return {
       'Authorization': `Bearer ${SUPABASE_KEY}`,
       'apikey': SUPABASE_KEY,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     };
   },
   async get(table, id) {
@@ -254,19 +255,22 @@ let busy=false;
 async function load(){
   // Hent delt state fra Supabase
   try {
+    console.log('Henter fra Supabase...');
     const row = await sb.get('tipskonkurrence', 'shared');
+    console.log('Supabase svar:', row);
     if (row && row.data) {
-      S = Object.assign(S, JSON.parse(row.data));
+      const remote = JSON.parse(row.data);
+      S = Object.assign(S, remote);
+      console.log('Data indlæst fra Supabase:', S.participants);
     } else {
-      // Fallback: brug localStorage hvis Supabase er tom
+      console.log('Ingen data i Supabase, bruger localStorage');
       const local = localStorage.getItem(STORE);
       if (local) S = Object.assign(S, JSON.parse(local));
     }
   } catch(e) {
-    // Offline: brug localStorage
+    console.error('Supabase fejl ved load:', e.message);
     const local = localStorage.getItem(STORE);
     if (local) S = Object.assign(S, JSON.parse(local));
-    console.warn('Supabase ikke tilgængelig, bruger lokal cache:', e.message);
   }
   render();
 }
@@ -445,7 +449,7 @@ function renderSetup(){
       Gratis, ingen API-nøgle. Opdateres typisk inden for minutter efter en kamp er færdig.
     </div>
     <h3 style="margin-top:0">Om data-lagring</h3>
-    <div style="font-size:13px;color:#555;line-height:1.7">Tips og resultater gemmes i browserens <strong>localStorage</strong> – dvs. de er kun tilgængelige på den enhed/browser du bruger siden fra. Del siden med alle deltagere så de selv kan taste deres tips ind.</div>
+    <div style="font-size:13px;color:#555;line-height:1.7">Tips og deltagere gemmes i en delt database (Supabase) – alle der åbner siden ser de samme data i realtid. Siden synkroniserer automatisk hvert 30. sekund, så alle kollegaer kan taste deres egne tips fra deres egne enheder.</div>
     <button class="danger-btn" onclick="resetAll()">🗑 Nulstil alle data</button>
   </div>`;
 }
