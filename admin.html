@@ -6,7 +6,7 @@
 <title>VM 2026 – Admin</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;padding:16px}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;padding:20px;max-width:1100px;margin:0 auto}
 h1{background:#1A2D3D;color:#fff;padding:14px 20px;border-radius:10px;font-size:17px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
 .card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px}
 .card h2{font-size:14px;font-weight:600;margin-bottom:12px;color:#1a2d3d}
@@ -14,10 +14,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#1A2D3D;color:#fff;padding:8px 10px;text-align:left;font-weight:600}
 td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:middle}
 tr:nth-child(even) td{background:#fafafa}
-.score-inp{width:60px;padding:4px 6px;font-size:13px;text-align:center;border:1px solid #ccc;border-radius:6px}
+.score-inp{width:52px;padding:4px 6px;font-size:13px;text-align:center;border:1px solid #ccc;border-radius:6px;display:inline-block}
 .score-inp:focus{outline:none;border-color:#1A2D3D}
 .sep{display:inline-block;width:20px;text-align:center;font-weight:700;color:#888}
-.save-btn{padding:5px 14px;background:#1A2D3D;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600}
+.save-btn{padding:6px 16px;background:#1A2D3D;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
 .save-btn:hover{background:#243d52}
 .save-btn.saved{background:#2E7D32}
 .lock{color:#999;font-size:11px}
@@ -44,7 +44,7 @@ tr:nth-child(even) td{background:#fafafa}
     <thead><tr>
       <th style="width:40px">#</th>
       <th>Hjemmehold</th>
-      <th style="width:120px;text-align:center">Resultat</th>
+      <th style="width:160px;text-align:center">Resultat</th>
       <th>Udehold</th>
       <th style="width:46px;text-align:center">Tip</th>
       <th style="width:70px"></th>
@@ -166,16 +166,23 @@ const sbHeaders = {
 };
 
 async function loadState() {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.shared&select=*`, {headers: sbHeaders});
+  // Hent resultater fra separat række
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.results&select=*`, {headers: sbHeaders});
   const d = await r.json();
-  if (d[0]?.data) state = Object.assign(state, JSON.parse(d[0].data));
+  if (d[0]?.data) {
+    const res = JSON.parse(d[0].data);
+    state.results = res.results || {};
+    state.live = res.live || {};
+  }
 }
 
 async function saveState() {
+  // Gem KUN resultater i separat række – aldrig tips/deltagere her
+  const resData = {results: state.results, live: state.live};
   await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence`, {
     method: 'POST',
     headers: {...sbHeaders, 'Prefer': 'resolution=merge-duplicates'},
-    body: JSON.stringify({id:'shared', data: JSON.stringify(state), updated_at: new Date().toISOString()})
+    body: JSON.stringify({id:'results', data: JSON.stringify(resData), updated_at: new Date().toISOString()})
   });
 }
 
@@ -206,7 +213,7 @@ function renderTable() {
     html += `<tr>
       <td style="font-weight:700;color:#1a2d3d">${num}</td>
       <td>${t1}</td>
-      <td style="text-align:center">
+      <td style="text-align:center;white-space:nowrap">
         <input class="score-inp" id="s1-${num}" value="${s1}" placeholder="–" type="number" min="0" max="20">
         <span class="sep">–</span>
         <input class="score-inp" id="s2-${num}" value="${s2}" placeholder="–" type="number" min="0" max="20">
