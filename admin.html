@@ -37,6 +37,13 @@ tr:nth-child(even) td{background:#fafafa}
 
 <div id="status" class="status"></div>
 
+<div class="card" style="margin-bottom:14px">
+  <h2>Hurtig import af kendte resultater</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:10px">Klik for at udfylde alle kendte resultater og gem dem samlet til Supabase.</p>
+  <button onclick="importKnown()" style="padding:8px 18px;background:#F0830C;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;margin-right:8px">Importer kendte resultater</button>
+  <button onclick="saveAll()" style="padding:8px 18px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Gem alle til Supabase</button>
+</div>
+
 <div class="card">
   <h2>Kampresultater — opdater manuelt</h2>
   <p style="font-size:12px;color:#888;margin-bottom:12px">Skriv slutresultat (90 min) og klik Gem. Opdaterer Supabase med det samme så alle ser det.</p>
@@ -214,9 +221,9 @@ function renderTable() {
       <td style="font-weight:700;color:#1a2d3d">${num}</td>
       <td>${t1}</td>
       <td style="text-align:center;white-space:nowrap">
-        <input class="score-inp" id="s1-${num}" value="${s1}" placeholder="–" type="number" min="0" max="20">
+        <input class="score-inp" id="s1-${num}" value="${s1}" placeholder="" type="number" min="0" max="20">
         <span class="sep">–</span>
-        <input class="score-inp" id="s2-${num}" value="${s2}" placeholder="–" type="number" min="0" max="20">
+        <input class="score-inp" id="s2-${num}" value="${s2}" placeholder="" type="number" min="0" max="20">
       </td>
       <td>${t2}</td>
       <td style="text-align:center">${tipVal}</td>
@@ -282,6 +289,45 @@ function showStatus(type, msg) {
   el.className = 'status ' + type;
   el.textContent = msg;
   setTimeout(() => el.style.display = 'none', 4000);
+}
+
+// Kendte resultater per 15. juni 2026
+const KNOWN = {
+  1: [2,0], 2: [2,1], 3: [1,1], 4: [4,1], 5: [0,1],
+  6: [2,0], 7: [1,1], 8: [1,1], 9: [1,0], 10: [7,1],
+  11: [2,2], 12: [5,1], 14: [0,0], 16: [1,1]
+};
+
+function importKnown() {
+  Object.entries(KNOWN).forEach(([num, [s1, s2]]) => {
+    const i1 = document.getElementById(`s1-${num}`);
+    const i2 = document.getElementById(`s2-${num}`);
+    if (i1) i1.value = s1;
+    if (i2) i2.value = s2;
+  });
+  showStatus('ok', 'Kendte resultater udfyldt – klik "Gem alle til Supabase" for at gemme');
+}
+
+async function saveAll() {
+  let count = 0;
+  for (const [num] of MATCHES) {
+    const s1v = document.getElementById(`s1-${num}`)?.value;
+    const s2v = document.getElementById(`s2-${num}`)?.value;
+    if (s1v !== '' && s2v !== '' && s1v !== undefined) {
+      const s1 = parseInt(s1v), s2 = parseInt(s2v);
+      const t = calcTip(s1, s2);
+      state.results[String(num)] = t;
+      state.live[num] = {score: `${s1}–${s2}`};
+      count++;
+    }
+  }
+  try {
+    await saveState();
+    showStatus('ok', `✓ ${count} resultater gemt i Supabase`);
+    renderTable();
+  } catch(e) {
+    showStatus('err', 'Fejl: ' + e.message);
+  }
 }
 
 // Init
