@@ -205,7 +205,41 @@ const M=[
 [104,'W101','W102','19-jul','FINALE',1784494800000]
 ];
 
-const STORE='vm2026_tips_v1';
+// ── Supabase config ──────────────────────────────────────────
+// Udfyld disse to værdier efter du har oprettet Supabase-projekt
+const SUPABASE_URL = 'https://fttdvrfibkxqzfljyhoj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGR2cmZpYmt4cXpmbGp5aG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTAzNDQsImV4cCI6MjA5NzEyNjM0NH0.juD8gL9wk_TRZMSRKtC4pQQ1WPTTBP3e8cRTByAxjEo';
+const STORE = 'vm2026_tips_v1'; // bruges til lokal backup
+
+const sb = {
+  headers() {
+    return {
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'apikey': SUPABASE_KEY,
+      'Content-Type': 'application/json'
+    };
+  },
+  async get(table, id) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}&select=*`,
+      { headers: this.headers() }
+    );
+    if (!r.ok) throw new Error('GET fejl ' + r.status);
+    const d = await r.json();
+    return d[0] || null;
+  },
+  async upsert(table, row) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { ...this.headers(), 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(row)
+    });
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error('UPSERT fejl ' + r.status + ': ' + err);
+    }
+  }
+};
 // jsDelivr er et globalt CDN der server GitHub-filer med korrekte CORS-headers
 // raw.githubusercontent.com bruges som fallback
 const URLS=[
@@ -217,18 +251,43 @@ const URLS=[
 let S={participants:[],tips:{},results:{},live:{},filter:'all'};
 let busy=false;
 
-function load(){
-  try{const d=localStorage.getItem(STORE);if(d)S=Object.assign(S,JSON.parse(d));}catch(e){}
+async function load(){
+  // Hent delt state fra Supabase
+  try {
+    const row = await sb.get('tipskonkurrence', 'shared');
+    if (row && row.data) {
+      S = Object.assign(S, JSON.parse(row.data));
+    } else {
+      // Fallback: brug localStorage hvis Supabase er tom
+      const local = localStorage.getItem(STORE);
+      if (local) S = Object.assign(S, JSON.parse(local));
+    }
+  } catch(e) {
+    // Offline: brug localStorage
+    const local = localStorage.getItem(STORE);
+    if (local) S = Object.assign(S, JSON.parse(local));
+    console.warn('Supabase ikke tilgængelig, bruger lokal cache:', e.message);
+  }
   render();
 }
 
-function save(){
-  try{
-    localStorage.setItem(STORE,JSON.stringify(S));
-    const b=document.getElementById('savebar');b.style.display='block';
-    const n=new Date();document.getElementById('sts').textContent='Gemt '+n.getHours()+':'+String(n.getMinutes()).padStart(2,'0');
-    setTimeout(()=>b.style.display='none',2000);
-  }catch(e){}
+async function save(){
+  try {
+    // Gem lokalt med det samme (hurtig feedback)
+    localStorage.setItem(STORE, JSON.stringify(S));
+    const b = document.getElementById('savebar'); b.style.display = 'block';
+    const n = new Date();
+    document.getElementById('sts').textContent = 'Gemt ' + n.getHours() + ':' + String(n.getMinutes()).padStart(2,'0');
+    setTimeout(() => b.style.display = 'none', 2000);
+    // Gem til Supabase (delt med alle)
+    await sb.upsert('tipskonkurrence', {
+      id: 'shared',
+      data: JSON.stringify(S),
+      updated_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.warn('Supabase gem fejlede:', e.message);
+  }
 }
 
 function tip(s1,s2){
@@ -442,6 +501,24 @@ function render(){renderStilling();renderSetup();}
 load();
 setTimeout(()=>fetchLive(),800);
 setInterval(()=>fetchLive(),10*60*1000);
+
+// Auto-sync tips fra Supabase hvert 30. sekund
+setInterval(async()=>{
+  try{
+    const row=await sb.get('tipskonkurrence','shared');
+    if(row&&row.data){
+      const remote=JSON.parse(row.data);
+      // Flet remote state ind — bevar lokale resultater
+      const merged=Object.assign({},remote,{results:S.results,live:S.live});
+      if(JSON.stringify(merged)!==JSON.stringify(S)){
+        S=merged;
+        localStorage.setItem(STORE,JSON.stringify(S));
+        renderStilling();
+        if(document.getElementById('t-tips').style.display!=='none')renderTips();
+      }
+    }
+  }catch(e){console.warn('Sync fejl:',e.message);}
+},30000);
 </script>
 </body>
 </html>
