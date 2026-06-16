@@ -86,13 +86,13 @@ input.ri:focus{outline:none;border-color:#1a2d3d}
 <div class="tabs">
   <div class="tab active" onclick="showTab('stilling')">🏆 Stilling</div>
   <div class="tab" onclick="showTab('tips')">⚽ Tipsark</div>
-  <div class="tab" onclick="showTab('setup')">👥 Deltagere</div>
+
 </div>
 <div class="body">
   <div id="savebar" class="savebar">✓ Gemt</div>
   <div id="t-stilling"></div>
   <div id="t-tips" style="display:none"></div>
-  <div id="t-setup" style="display:none"></div>
+
 </div>
 </div>
 </div>
@@ -348,11 +348,10 @@ async function fetchLive(manual){
 }
 
 function showTab(t){
-  ['stilling','tips','setup'].forEach(x=>document.getElementById('t-'+x).style.display=x===t?'block':'none');
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['stilling','tips','setup'][i]===t));
+  ['stilling','tips'].forEach(x=>document.getElementById('t-'+x).style.display=x===t?'block':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['stilling','tips'][i]===t));
   if(t==='stilling')renderStilling();
   if(t==='tips')renderTips();
-  if(t==='setup')renderSetup();
 }
 
 function scores(){
@@ -432,35 +431,6 @@ function renderTips(){
   el.innerHTML=h;
 }
 
-function renderSetup(){
-  const el=document.getElementById('t-setup');
-  el.innerHTML=`
-  <div class="sbox">
-    <h3>Deltagere</h3>
-    <div id="ptags">${S.participants.map(p=>`<span class="ptag">👤 ${p}<button onclick="removeP('${p}')">×</button></span>`).join('')}</div>
-    <div class="add-row"><input type="text" id="nn" placeholder="Skriv navn…" onkeydown="if(event.key==='Enter')addP()"><button onclick="addP()">Tilføj</button></div>
-  </div>
-  <div class="sbox">
-    <h3>Tip-regler</h3>
-    <div style="font-size:13px;color:#555;line-height:1.9">
-      <span class="badge badge-o">1</span> Hjemmehold vinder &nbsp;
-      <span class="badge badge-o">X</span> Uafgjort &nbsp;
-      <span class="badge badge-o">2</span> Udehold vinder<br>
-      <span class="badge badge-g" style="margin-top:6px">1 point</span> for hvert korrekt tip
-    </div>
-  </div>
-  <div class="sbox">
-    <h3>Om live-opdatering</h3>
-    <div class="info-box">
-      📡 Klik på <strong>Hent resultater online</strong> i Tipsarket for at hente aktuelle kampresultater direkte fra <strong>openfootball/worldcup.json</strong> på GitHub.
-      Gratis, ingen API-nøgle. Opdateres typisk inden for minutter efter en kamp er færdig.
-    </div>
-    <h3 style="margin-top:0">Om data-lagring</h3>
-    <div style="font-size:13px;color:#555;line-height:1.7">Tips og deltagere gemmes i en delt database (Supabase) – alle der åbner siden ser de samme data i realtid. Siden synkroniserer automatisk hvert 30. sekund, så alle kollegaer kan taste deres egne tips fra deres egne enheder.</div>
-    <button class="danger-btn" onclick="resetAll()">🗑 Nulstil alle data</button>
-  </div>`;
-}
-
 function setFilter(f){S.filter=f;renderTips();}
 
 function setRes(inp){
@@ -506,7 +476,7 @@ function setSyncStatus(state,txt){
   if(label){label.textContent=txt;}
 }
 
-function render(){renderStilling();renderSetup();}
+function render(){renderStilling();}
 
 // Auto-hent ved load og derefter hvert 10. minut
 load();
