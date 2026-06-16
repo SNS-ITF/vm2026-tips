@@ -364,6 +364,12 @@ function showTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['stilling','tips'][i]===t));
   if(t==='stilling')renderStilling();
   if(t==='tips'){
+    // Tjek om gemt bruger stadig er gyldig deltager
+    if(currentUser && !S.participants.includes(currentUser)){
+      currentUser = null;
+      sessionStorage.removeItem('vm2026_user');
+      updateUserBar();
+    }
     if(!currentUser && S.participants.length > 0){
       showUserModal();
     }
@@ -406,7 +412,16 @@ function renderStilling(){
 
 function renderTips(){
   const el=document.getElementById('t-tips');
-  if(!S.participants.length){el.innerHTML='<div style="text-align:center;padding:48px;color:#888">Tilføj deltagere under "Deltagere" for at begynde</div>';return;}
+  if(!S.participants.length){el.innerHTML='<div style="text-align:center;padding:48px;color:#888">Tilføj deltagere via Admin-siden for at begynde</div>';return;}
+  if(!currentUser){
+    el.innerHTML=`<div style="text-align:center;padding:48px">
+      <div style="font-size:40px;margin-bottom:12px">👤</div>
+      <div style="font-size:15px;font-weight:600;margin-bottom:8px">Hvem er du?</div>
+      <div style="font-size:13px;color:#888;margin-bottom:20px">Vælg dit navn for at se og taste dine tips</div>
+      <button onclick="showUserModal()" style="padding:10px 24px;background:#1A2D3D;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">Vælg navn</button>
+    </div>`;
+    return;
+  }
   const filters=[['all','Alle'],['Gruppespil – Runde 1','Runde 1'],['Gruppespil – Runde 2','Runde 2'],['Gruppespil – Runde 3','Runde 3'],['Runde af 32','R32'],['Runde af 16','R16'],['Kvartfinale','QF'],['Semifinale','SF'],['FINALE','Finale']];
   let h=`<div class="fbar">`;
   filters.forEach(([v,l])=>h+=`<button class="fb${S.filter===v?' active':''}" onclick="setFilter('${v}')">${l}</button>`);
@@ -543,7 +558,15 @@ function setSyncStatus(state,txt){
   if(label){label.textContent=txt;}
 }
 
-function render(){renderStilling();updateUserBar();}
+function render(){
+  renderStilling();
+  updateUserBar();
+  // Hvis vi allerede er på tipsark og ingen bruger valgt – vis modal
+  const tipsVisible = document.getElementById('t-tips').style.display !== 'none';
+  if(tipsVisible && !currentUser && S.participants.length > 0){
+    showUserModal();
+  }
+}
 
 // Auto-hent ved load og derefter hvert 10. minut
 load();
