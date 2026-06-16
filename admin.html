@@ -42,6 +42,7 @@ tr:nth-child(even) td{background:#fafafa}
   <p style="font-size:12px;color:#888;margin-bottom:10px">Klik for at udfylde alle kendte resultater og gem dem samlet til Supabase.</p>
   <button onclick="importKnown()" style="padding:8px 18px;background:#F0830C;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;margin-right:8px">Importer kendte resultater</button>
   <button onclick="saveAll()" style="padding:8px 18px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Gem alle til Supabase</button>
+  <button onclick="debugSupabase()" style="padding:8px 18px;background:#666;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-left:8px">Tjek Supabase</button>
 </div>
 
 <div class="card">
@@ -253,15 +254,18 @@ async function saveMatch(num) {
   try {
     btn.textContent = '...';
     btn.disabled = true;
+    console.log('Gemmer til Supabase:', {results: state.results, live: state.live});
     await saveState();
+    console.log('Gemt OK');
     btn.textContent = '✓';
     btn.className = 'save-btn saved';
-    showStatus('ok', `Kamp ${num} gemt i Supabase`);
+    showStatus('ok', `✓ Kamp ${num} gemt – tip: ${state.results[String(num)]||'slettet'}`);
     setTimeout(() => { btn.textContent = 'Gem'; btn.className = 'save-btn'; btn.disabled = false; }, 2000);
     renderTable();
   } catch(e) {
-    showStatus('err', 'Fejl: ' + e.message);
-    btn.textContent = 'Gem';
+    console.error('Gem fejl:', e);
+    showStatus('err', 'Fejl ved gem: ' + e.message);
+    btn.textContent = 'Fejl';
     btn.disabled = false;
   }
 }
@@ -330,8 +334,18 @@ async function saveAll() {
   }
 }
 
-// Init
-loadState().then(() => renderTable());
+// Init – hent og vis hvad der er i Supabase
+async function debugSupabase() {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?select=*`, {headers: sbHeaders});
+  const d = await r.json();
+  console.log('Supabase rækker:', d);
+  alert('Rækker i Supabase:\n' + d.map(r => `${r.id}: ${r.data?.substring(0,80)}...`).join('\n'));
+}
+
+loadState().then(() => {
+  renderTable();
+  console.log('State efter load:', {results: state.results, live: state.live});
+});
 </script>
 </body>
 </html>
