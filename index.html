@@ -505,6 +505,9 @@ function confirmUser() {
   sessionStorage.setItem('vm2026_user', currentUser);
   document.getElementById('user-modal').style.display = 'none';
   updateUserBar();
+  // Sørg for tipsark er synligt og render med ny bruger
+  ['stilling','tips'].forEach(x=>document.getElementById('t-'+x).style.display=x==='tips'?'block':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',i===1));
   renderTips();
 }
 
