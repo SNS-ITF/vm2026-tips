@@ -88,6 +88,19 @@ input.ri:focus{outline:none;border-color:#1a2d3d}
 </style>
 </head>
 <body>
+
+<!-- Bruger-vælger modal – direkte under body så position:fixed virker -->
+<div id="user-modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <h2>Hvem er du?</h2>
+    <p>Vælg dit navn for at taste dine tips ind</p>
+    <select id="user-select">
+      <option value="">-- Vælg navn --</option>
+    </select>
+    <button onclick="confirmUser()">Fortsæt</button>
+  </div>
+</div>
+
 <div class="wrap">
 <div class="hdr">
   <span style="font-size:26px">🏆</span>
