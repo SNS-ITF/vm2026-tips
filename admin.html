@@ -61,6 +61,21 @@ tr:nth-child(even) td{background:#fafafa}
   </table>
 </div>
 
+<div class="card" id="participants-card">
+  <h2>Deltagere</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:12px">Tilføj eller fjern deltagere. Gemmes automatisk til Supabase.</p>
+  <div id="ptag-list" style="margin-bottom:12px"></div>
+  <div style="display:flex;gap:8px">
+    <input type="text" id="new-participant" placeholder="Navn på deltager…"
+      style="flex:1;padding:8px 12px;border:1px solid #ccc;border-radius:8px;font-size:13px"
+      onkeydown="if(event.key==='Enter')addParticipant()">
+    <button onclick="addParticipant()"
+      style="padding:8px 18px;background:#F0830C;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">
+      Tilføj
+    </button>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = 'https://fttdvrfibkxqzfljyhoj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGR2cmZpYmt4cXpmbGp5aG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTAzNDQsImV4cCI6MjA5NzEyNjM0NH0.juD8gL9wk_TRZMSRKtC4pQQ1WPTTBP3e8cRTByAxjEo';
@@ -174,14 +189,31 @@ const sbHeaders = {
 };
 
 async function loadState() {
-  // Hent resultater fra separat række
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.results&select=*`, {headers: sbHeaders});
-  const d = await r.json();
-  if (d[0]?.data) {
-    const res = JSON.parse(d[0].data);
+  // Hent resultater
+  const r1 = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.results&select=*`, {headers: sbHeaders});
+  const d1 = await r1.json();
+  if (d1[0]?.data) {
+    const res = JSON.parse(d1[0].data);
     state.results = res.results || {};
     state.live = res.live || {};
   }
+  // Hent deltagere og tips fra shared
+  const r2 = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.shared&select=*`, {headers: sbHeaders});
+  const d2 = await r2.json();
+  if (d2[0]?.data) {
+    const shared = JSON.parse(d2[0].data);
+    state.participants = shared.participants || [];
+    state.tips = shared.tips || {};
+  }
+}
+
+async function saveShared() {
+  const shareData = {participants: state.participants, tips: state.tips, filter: state.filter};
+  await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence`, {
+    method: 'POST',
+    headers: {...sbHeaders, 'Prefer': 'resolution=merge-duplicates'},
+    body: JSON.stringify({id:'shared', data: JSON.stringify(shareData), updated_at: new Date().toISOString()})
+  });
 }
 
 async function saveState() {
@@ -295,6 +327,117 @@ function showStatus(type, msg) {
   setTimeout(() => el.style.display = 'none', 4000);
 }
 
+function renderParticipants() {
+  const el = document.getElementById('ptag-list');
+  if (!el) return;
+  if (!state.participants.length) {
+    el.innerHTML = '<p style="color:#888;font-size:13px">Ingen deltagere endnu.</p>';
+    return;
+  }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr>
+      <th style="background:#1A2D3D;color:#fff;padding:8px 10px;text-align:left;font-weight:600">Navn</th>
+      <th style="background:#1A2D3D;color:#fff;padding:8px 10px;text-align:center;width:80px">Tips</th>
+      <th style="background:#1A2D3D;color:#fff;padding:8px 10px;text-align:center;width:180px">Handlinger</th>
+    </tr></thead>
+    <tbody>
+    ${state.participants.map((p,i) => {
+      const tipCount = Object.keys(state.tips[p]||{}).length;
+      return `<tr style="border-bottom:1px solid #eee;${i%2===0?'':'background:#fafafa'}">
+        <td style="padding:8px 10px">
+          <span id="name-display-${i}" style="font-weight:500">👤 ${p}</span>
+          <input id="name-edit-${i}" value="${p}"
+            style="display:none;padding:5px 8px;border:1px solid #F0830C;border-radius:6px;font-size:13px;width:180px">
+        </td>
+        <td style="padding:8px 10px;text-align:center;color:#888">${tipCount}</td>
+        <td style="padding:8px 10px;text-align:center;white-space:nowrap">
+          <button id="edit-btn-${i}" onclick="startEdit(${i},'${p}')"
+            style="padding:4px 12px;background:#1A2D3D;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:4px">
+            ✏️ Ret
+          </button>
+          <button id="save-btn-${i}" onclick="saveEdit(${i},'${p}')"
+            style="display:none;padding:4px 12px;background:#2E7D32;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:4px">
+            ✓ Gem
+          </button>
+          <button id="cancel-btn-${i}" onclick="cancelEdit(${i},'${p}')"
+            style="display:none;padding:4px 12px;background:#666;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;margin-right:4px">
+            Annuller
+          </button>
+          <button onclick="removeParticipant('${p}')"
+            style="padding:4px 12px;background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;border-radius:6px;font-size:12px;cursor:pointer">
+            🗑
+          </button>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function startEdit(i, name) {
+  document.getElementById(`name-display-${i}`).style.display = 'none';
+  document.getElementById(`name-edit-${i}`).style.display = 'inline-block';
+  document.getElementById(`edit-btn-${i}`).style.display = 'none';
+  document.getElementById(`save-btn-${i}`).style.display = 'inline-block';
+  document.getElementById(`cancel-btn-${i}`).style.display = 'inline-block';
+  document.getElementById(`name-edit-${i}`).focus();
+  document.getElementById(`name-edit-${i}`).select();
+}
+
+function cancelEdit(i, name) {
+  document.getElementById(`name-display-${i}`).style.display = '';
+  document.getElementById(`name-edit-${i}`).style.display = 'none';
+  document.getElementById(`edit-btn-${i}`).style.display = '';
+  document.getElementById(`save-btn-${i}`).style.display = 'none';
+  document.getElementById(`cancel-btn-${i}`).style.display = 'none';
+  document.getElementById(`name-edit-${i}`).value = name;
+}
+
+async function saveEdit(i, oldName) {
+  const newName = document.getElementById(`name-edit-${i}`).value.trim();
+  if (!newName) return;
+  if (newName === oldName) { cancelEdit(i, oldName); return; }
+  if (state.participants.includes(newName)) {
+    showStatus('err', `"${newName}" findes allerede`); return;
+  }
+  // Flyt tips fra gammelt navn til nyt – ingen tips mistes
+  const idx = state.participants.indexOf(oldName);
+  state.participants[idx] = newName;
+  if (state.tips[oldName]) {
+    state.tips[newName] = state.tips[oldName];
+    delete state.tips[oldName];
+  }
+  try {
+    await saveShared();
+    showStatus('ok', `✓ "${oldName}" omdøbt til "${newName}" – ${Object.keys(state.tips[newName]||{}).length} tips bevaret`);
+  } catch(e) { showStatus('err', 'Fejl: ' + e.message); }
+  renderParticipants();
+}
+
+async function addParticipant() {
+  const inp = document.getElementById('new-participant');
+  const name = inp.value.trim();
+  if (!name || state.participants.includes(name)) return;
+  state.participants.push(name);
+  inp.value = '';
+  try {
+    await saveShared();
+    showStatus('ok', `✓ ${name} tilføjet`);
+  } catch(e) { showStatus('err', 'Fejl: ' + e.message); }
+  renderParticipants();
+}
+
+async function removeParticipant(name) {
+  if (!confirm(`Fjern ${name}?`)) return;
+  state.participants = state.participants.filter(p => p !== name);
+  delete state.tips[name];
+  try {
+    await saveShared();
+    showStatus('ok', `✓ ${name} fjernet`);
+  } catch(e) { showStatus('err', 'Fejl: ' + e.message); }
+  renderParticipants();
+}
+
 // Kendte resultater per 15. juni 2026
 const KNOWN = {
   1: [2,0], 2: [2,1], 3: [1,1], 4: [4,1], 5: [0,1],
@@ -344,7 +487,7 @@ async function debugSupabase() {
 
 loadState().then(() => {
   renderTable();
-  console.log('State efter load:', {results: state.results, live: state.live});
+  renderParticipants();
 });
 </script>
 </body>
