@@ -253,24 +253,26 @@ let S={participants:[],tips:{},results:{},live:{},filter:'all'};
 let busy=false;
 
 async function load(){
-  // Hent delt state fra Supabase
+  // Ryd gammel localStorage så den ikke overskriver Supabase-data
+  localStorage.removeItem(STORE);
   try {
-    console.log('Henter fra Supabase...');
+    // Hent tips og deltagere fra shared-rækken
     const row = await sb.get('tipskonkurrence', 'shared');
-    console.log('Supabase svar:', row);
     if (row && row.data) {
       const remote = JSON.parse(row.data);
-      S = Object.assign(S, remote);
-      console.log('Data indlæst fra Supabase:', S.participants);
-    } else {
-      console.log('Ingen data i Supabase, bruger localStorage');
-      const local = localStorage.getItem(STORE);
-      if (local) S = Object.assign(S, JSON.parse(local));
+      S.participants = remote.participants || [];
+      S.tips = remote.tips || {};
+      S.filter = remote.filter || 'all';
+    }
+    // Hent resultater fra results-rækken – altid højere prioritet
+    const resRow = await sb.get('tipskonkurrence', 'results');
+    if (resRow && resRow.data) {
+      const resData = JSON.parse(resRow.data);
+      S.results = resData.results || {};
+      S.live = resData.live || {};
     }
   } catch(e) {
-    console.error('Supabase fejl ved load:', e.message);
-    const local = localStorage.getItem(STORE);
-    if (local) S = Object.assign(S, JSON.parse(local));
+    console.warn('Load fejl:', e.message);
   }
   render();
 }
@@ -283,10 +285,15 @@ async function save(){
     const n = new Date();
     document.getElementById('sts').textContent = 'Gemt ' + n.getHours() + ':' + String(n.getMinutes()).padStart(2,'0');
     setTimeout(() => b.style.display = 'none', 2000);
-    // Gem til Supabase (delt med alle)
+    // Gem kun tips og deltagere til Supabase – resultater håndteres af admin/Action
+    const shareData = {
+      participants: S.participants,
+      tips: S.tips,
+      filter: S.filter
+    };
     await sb.upsert('tipskonkurrence', {
       id: 'shared',
-      data: JSON.stringify(S),
+      data: JSON.stringify(shareData),
       updated_at: new Date().toISOString()
     });
   } catch(e) {
@@ -506,23 +513,39 @@ load();
 setTimeout(()=>fetchLive(),800);
 setInterval(()=>fetchLive(),10*60*1000);
 
-// Auto-sync tips fra Supabase hvert 30. sekund
+// Auto-sync fra Supabase hvert 15. sekund
 setInterval(async()=>{
   try{
+    // Hent tips og deltagere
     const row=await sb.get('tipskonkurrence','shared');
     if(row&&row.data){
       const remote=JSON.parse(row.data);
-      // Flet remote state ind — bevar lokale resultater
-      const merged=Object.assign({},remote,{results:S.results,live:S.live});
-      if(JSON.stringify(merged)!==JSON.stringify(S)){
-        S=merged;
+      const changed=
+        JSON.stringify(remote.participants)!==JSON.stringify(S.participants)||
+        JSON.stringify(remote.tips)!==JSON.stringify(S.tips);
+      if(changed){
+        S.participants=remote.participants||S.participants;
+        S.tips=remote.tips||S.tips;
+        S.filter=remote.filter||S.filter;
         localStorage.setItem(STORE,JSON.stringify(S));
         renderStilling();
         if(document.getElementById('t-tips').style.display!=='none')renderTips();
       }
     }
+    // Hent resultater fra results-rækken – overskriv altid lokale
+    const resRow=await sb.get('tipskonkurrence','results');
+    if(resRow&&resRow.data){
+      const resData=JSON.parse(resRow.data);
+      const resChanged=JSON.stringify(resData.results)!==JSON.stringify(S.results);
+      if(resChanged){
+        S.results=resData.results||{};
+        S.live=resData.live||{};
+        renderStilling();
+        if(document.getElementById('t-tips').style.display!=='none')renderTips();
+      }
+    }
   }catch(e){console.warn('Sync fejl:',e.message);}
-},30000);
+},15000);
 </script>
 </body>
 </html>
