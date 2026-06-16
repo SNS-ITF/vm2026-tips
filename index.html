@@ -73,6 +73,18 @@ input.ri:focus{outline:none;border-color:#1a2d3d}
 .stat-val{font-size:20px;font-weight:700}
 .spin{display:inline-block;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+.modal-overlay{position:fixed;inset:0;background:#0006;z-index:100;display:flex;align-items:center;justify-content:center}
+.modal{background:#fff;border-radius:12px;padding:28px;width:320px;box-shadow:0 8px 32px #0003;text-align:center}
+.modal h2{font-size:16px;font-weight:600;color:#1a2d3d;margin-bottom:8px}
+.modal p{font-size:13px;color:#888;margin-bottom:18px}
+.modal select{width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:8px;font-size:14px;margin-bottom:14px;background:#fff;color:#1a2d3d}
+.modal button{width:100%;padding:10px;background:#1A2D3D;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer}
+.modal button:hover{background:#243d52}
+.user-bar{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#EEF2F5;border-bottom:1px solid #ddd;font-size:13px;color:#1a2d3d}
+.user-bar strong{color:#F0830C}
+.user-bar button{margin-left:auto;padding:4px 12px;background:none;border:1px solid #ccc;border-radius:6px;font-size:12px;cursor:pointer;color:#666}
+.user-bar button:hover{background:#fff}
+.locked-tip{display:inline-block;width:44px;text-align:center;padding:3px 4px;font-size:12px;border-radius:4px;color:#ccc;background:#f5f5f5}
 </style>
 </head>
 <body>
@@ -351,7 +363,12 @@ function showTab(t){
   ['stilling','tips'].forEach(x=>document.getElementById('t-'+x).style.display=x===t?'block':'none');
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['stilling','tips'][i]===t));
   if(t==='stilling')renderStilling();
-  if(t==='tips')renderTips();
+  if(t==='tips'){
+    if(!currentUser && S.participants.length > 0){
+      showUserModal();
+    }
+    renderTips();
+  }
 }
 
 function scores(){
@@ -418,17 +435,67 @@ function renderTips(){
     S.participants.forEach(p=>{
       const t=(S.tips[p]||{})[m[0]]||'';
       const hit=res&&t&&t===res,miss=res&&t&&t!==res;
-      const locked=m[5]&&Date.now()>=m[5];
-      if(locked){
+      const matchLocked=m[5]&&Date.now()>=m[5];
+      const isMyCol=p===currentUser;
+      if(matchLocked){
+        // Kamp startet – vis resultat som badge for alle
         h+=`<td style="text-align:center"><span style="display:inline-block;width:44px;padding:3px 4px;font-size:12px;text-align:center;border-radius:4px;background:${hit?'#C8E6C9':miss?'#FFEBEE':'#f0f0f0'};color:${hit?'#1B5E20':miss?'#B71C1C':'#999'};font-weight:${hit||miss?700:400}">${t||'–'}</span></td>`;
+      } else if(isMyCol){
+        // Min kolonne – kan redigeres
+        h+=`<td style="text-align:center;background:#FFFBF0"><input class="ti${hit?' hit':miss?' miss':''}" data-m="${m[0]}" data-p="${encodeURIComponent(p)}" value="${t}" placeholder="?" oninput="setTip(this)"></td>`;
       } else {
-        h+=`<td style="text-align:center"><input class="ti${hit?' hit':miss?' miss':''}" data-m="${m[0]}" data-p="${encodeURIComponent(p)}" value="${t}" placeholder="?" oninput="setTip(this)"></td>`;
+        // Andres kolonne – låst
+        h+=`<td style="text-align:center"><span class="locked-tip">${t||'?'}</span></td>`;
       }
     });
     h+=`</tr>`;
   });
   h+=`</tbody></table></div>`;
   el.innerHTML=h;
+}
+
+// ── Bruger-session ──────────────────────────────────────────
+let currentUser = sessionStorage.getItem('vm2026_user') || null;
+
+function showUserModal() {
+  const modal = document.getElementById('user-modal');
+  const sel = document.getElementById('user-select');
+  sel.innerHTML = '<option value="">-- Vælg navn --</option>';
+  S.participants.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    if (p === currentUser) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  modal.style.display = 'flex';
+}
+
+function confirmUser() {
+  const sel = document.getElementById('user-select');
+  if (!sel.value) return;
+  currentUser = sel.value;
+  sessionStorage.setItem('vm2026_user', currentUser);
+  document.getElementById('user-modal').style.display = 'none';
+  updateUserBar();
+  renderTips();
+}
+
+function changeUser() {
+  currentUser = null;
+  sessionStorage.removeItem('vm2026_user');
+  updateUserBar();
+  showUserModal();
+}
+
+function updateUserBar() {
+  const bar = document.getElementById('user-bar');
+  const name = document.getElementById('user-bar-name');
+  if (currentUser) {
+    bar.style.display = 'flex';
+    name.textContent = currentUser;
+  } else {
+    bar.style.display = 'none';
+  }
 }
 
 function setFilter(f){S.filter=f;renderTips();}
@@ -476,7 +543,7 @@ function setSyncStatus(state,txt){
   if(label){label.textContent=txt;}
 }
 
-function render(){renderStilling();}
+function render(){renderStilling();updateUserBar();}
 
 // Auto-hent ved load og derefter hvert 10. minut
 load();
