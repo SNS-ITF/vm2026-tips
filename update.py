@@ -14,8 +14,8 @@ from datetime import datetime, timezone
 MANUAL_RESULTS = {
     16: (1, 1),   # Belgium 1-1 Egypt         (15-jun)
     14: (0, 0),   # Spain 0-0 Cape Verde       (15-jun)
-    # 13: (1, 1), # Saudi Arabia vs Uruguay    (16-jun)
-    # 15: (2, 2), # IR Iran vs New Zealand     (16-jun)
+    13: (1, 1), # Saudi Arabia vs Uruguay    (16-jun)
+    15: (2, 2), # IR Iran vs New Zealand     (16-jun)
 }
 # ────────────────────────────────────────────────────────────────────────────
 
