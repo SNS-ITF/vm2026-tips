@@ -587,10 +587,17 @@ setInterval(()=>fetchLive(),10*60*1000);
 // Auto-sync fra Supabase hvert 15. sekund
 setInterval(async()=>{
   try{
-    // Hent tips og deltagere
-    const row=await sb.get('tipskonkurrence','shared');
-    if(row&&row.data){
-      const remote=JSON.parse(row.data);
+    // Hent begge rækker parallelt
+    const [sharedRow, resRow] = await Promise.all([
+      sb.get('tipskonkurrence','shared'),
+      sb.get('tipskonkurrence','results')
+    ]);
+
+    let needRender = false;
+
+    // Opdater tips og deltagere
+    if(sharedRow&&sharedRow.data){
+      const remote=JSON.parse(sharedRow.data);
       const changed=
         JSON.stringify(remote.participants)!==JSON.stringify(S.participants)||
         JSON.stringify(remote.tips)!==JSON.stringify(S.tips);
@@ -598,22 +605,25 @@ setInterval(async()=>{
         S.participants=remote.participants||S.participants;
         S.tips=remote.tips||S.tips;
         S.filter=remote.filter||S.filter;
-        localStorage.setItem(STORE,JSON.stringify(S));
-        renderStilling();
-        if(document.getElementById('t-tips').style.display!=='none')renderTips();
+        needRender=true;
       }
     }
-    // Hent resultater fra results-rækken – overskriv altid lokale
-    const resRow=await sb.get('tipskonkurrence','results');
+
+    // Opdater resultater
     if(resRow&&resRow.data){
       const resData=JSON.parse(resRow.data);
       const resChanged=JSON.stringify(resData.results)!==JSON.stringify(S.results);
       if(resChanged){
         S.results=resData.results||{};
         S.live=resData.live||{};
-        renderStilling();
-        if(document.getElementById('t-tips').style.display!=='none')renderTips();
+        needRender=true;
       }
+    }
+
+    // Render kun én gang når begge er hentet
+    if(needRender){
+      renderStilling();
+      if(document.getElementById('t-tips').style.display!=='none')renderTips();
     }
   }catch(e){console.warn('Sync fejl:',e.message);}
 },15000);
