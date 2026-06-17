@@ -353,10 +353,22 @@ async function fetchLive(manual){
   }
 
   let updated=0,unchanged=0;
+  // fetchLive opdaterer KUN live scores (målscorer til visning)
+  // S.results (1/X/2) styres autoritativt af Supabase via admin/GitHub Action
   Object.entries(data.results).forEach(([num,val])=>{
     const n=parseInt(num);
-    S.live[String(n)]={score:val.score};
-    if(S.results[String(n)]!==val.tip){S.results[String(n)]=val.tip;updated++;}else unchanged++;
+    // Opdater kun live score-visning, ikke selve resultatet
+    const hadScore = S.live[String(n)]?.score;
+    if(!hadScore){
+      S.live[String(n)]={score:val.score};
+      // Sæt kun tip hvis Supabase ikke allerede har det
+      if(!S.results[String(n)]){
+        S.results[String(n)]=val.tip;
+        updated++;
+      }
+    } else {
+      unchanged++;
+    }
   });
 
   save();
