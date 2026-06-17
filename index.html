@@ -355,8 +355,8 @@ async function fetchLive(manual){
   let updated=0,unchanged=0;
   Object.entries(data.results).forEach(([num,val])=>{
     const n=parseInt(num);
-    S.live[n]={score:val.score};
-    if(S.results[n]!==val.tip){S.results[n]=val.tip;updated++;}else unchanged++;
+    S.live[String(n)]={score:val.score};
+    if(S.results[String(n)]!==val.tip){S.results[String(n)]=val.tip;updated++;}else unchanged++;
   });
 
   save();
@@ -385,7 +385,7 @@ function scores(){
   const sc={};
   S.participants.forEach(p=>{
     let pts=0,correct=0,entered=0;
-    M.forEach(m=>{const t=(S.tips[p]||{})[m[0]];const r=S.results[m[0]];if(t)entered++;if(t&&r&&t===r){pts++;correct++;}});
+    M.forEach(m=>{const t=(S.tips[p]||{})[m[0]];const r=S.results[String(m[0])];if(t)entered++;if(t&&r&&t===r){pts++;correct++;}});
     sc[p]={pts,correct,entered};
   });
   return sc;
@@ -399,7 +399,7 @@ function renderStilling(){
   const sc=scores();
   const sorted=[...S.participants].sort((a,b)=>sc[b].pts-sc[a].pts);
   const medals=['🥇','🥈','🥉'];const cls=['gold','silver','bronze'];
-  const played=M.filter(m=>S.results[m[0]]).length;
+  const played=M.filter(m=>S.results[String(m[0])]).length;
   const lc=Object.keys(S.live).length;
   el.innerHTML=`
   <div class="statbar">
@@ -450,8 +450,8 @@ function renderTips(){
   const filtered=S.filter==='all'?M:M.filter(m=>m[4]===S.filter);
   filtered.forEach(m=>{
     if(m[4]!==lastSec){lastSec=m[4];h+=`<tr class="sec"><td colspan="${6+S.participants.length}">${m[4]}</td></tr>`;}
-    const res=S.results[m[0]]||'';
-    const lv=S.live[m[0]];
+    const res=S.results[String(m[0])]||'';
+    const lv=S.live[String(m[0])];
     const matchLocked=m[5]&&Date.now()>=(m[5]-3600000);
     h+=`<tr>
       <td style="text-align:center;font-weight:700;color:#1a2d3d">${m[0]}</td>
@@ -533,7 +533,7 @@ function setFilter(f){S.filter=f;renderTips();}
 
 function setRes(inp){
   const m=parseInt(inp.dataset.m);const v=inp.value.toUpperCase().replace('U','X');
-  S.results[m]=v;inp.value=v;save();
+  S.results[String(m)]=v;inp.value=v;save();
   document.querySelectorAll(`.ti[data-m="${m}"]`).forEach(t=>{
     const tv=t.value.toUpperCase();
     t.className='ti'+(v&&tv&&tv===v?' hit':v&&tv&&tv!==v?' miss':'');
@@ -547,7 +547,7 @@ function setTip(inp){
   const match=M.find(x=>x[0]===m);
   if(match&&match[5]&&Date.now()>=(match[5]-3600000)){inp.blur();return;} // 1 time før
   inp.value=v;if(!S.tips[p])S.tips[p]={};S.tips[p][m]=v;
-  const res=S.results[m]||'';
+  const res=S.results[String(m)]||'';
   inp.className='ti'+(res&&v&&v===res?' hit':res&&v&&v!==res?' miss':'');
   save();renderStilling();
 }
