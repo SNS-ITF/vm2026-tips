@@ -415,6 +415,17 @@ function renderStilling(){
 }
 
 function renderTips(){
+  // Debug: vis lock-status for kamp 17
+  const dbg = document.getElementById('debug-lock');
+  if(dbg){
+    const m17 = M.find(m=>m[0]===17);
+    if(m17){
+      const now = Date.now();
+      const lockAt = m17[5]-3600000;
+      const diff = Math.round((lockAt-now)/60000);
+      dbg.textContent = `K17 lock: ${diff>0?'om '+diff+'min':'LÅST'} (ts=${m17[5]}, now=${now})`;
+    }
+  }
   const el=document.getElementById('t-tips');
   if(!S.participants.length){el.innerHTML='<div style="text-align:center;padding:48px;color:#888">Tilføj deltagere via Admin-siden for at begynde</div>';return;}
   if(!currentUser){
@@ -426,7 +437,8 @@ function renderTips(){
   const filters=[['all','Alle'],['Gruppespil – Runde 1','Runde 1'],['Gruppespil – Runde 2','Runde 2'],['Gruppespil – Runde 3','Runde 3'],['Runde af 32','R32'],['Runde af 16','R16'],['Kvartfinale','QF'],['Semifinale','SF'],['FINALE','Finale']];
   let h=`<div class="fbar">`;
   filters.forEach(([v,l])=>h+=`<button class="fb${S.filter===v?' active':''}" onclick="setFilter('${v}')">${l}</button>`);
-  h+=`<div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Indlæser…</span></div></div>`;
+  h+=`<div class="sync-bar"><div class="sync-dot" id="sync-dot"></div><span id="sync-txt">Indlæser…</span>
+<span id="debug-lock" style="font-size:10px;color:#aaa;margin-left:8px"></span></div></div>`;
   h+=`<div id="fst" class="fst"></div>`;
   h+=`<div class="sw"><table><thead><tr>
     <th style="width:36px">#</th><th style="width:90px">Dato</th>
@@ -440,18 +452,21 @@ function renderTips(){
     if(m[4]!==lastSec){lastSec=m[4];h+=`<tr class="sec"><td colspan="${6+S.participants.length}">${m[4]}</td></tr>`;}
     const res=S.results[m[0]]||'';
     const lv=S.live[m[0]];
+    const matchLocked=m[5]&&Date.now()>=(m[5]-3600000);
     h+=`<tr>
       <td style="text-align:center;font-weight:700;color:#1a2d3d">${m[0]}</td>
-      <td style="font-size:11px;color:#888;white-space:nowrap">${m[3]}${m[5]&&Date.now()>=m[5]?' 🔒':''}</td>
+      <td style="font-size:11px;color:#888;white-space:nowrap">${m[3]}${matchLocked?' 🔒':''}</td>
       <td>${m[1]}</td><td style="text-align:center;color:#ccc">–</td><td>${m[2]}</td>
       <td style="text-align:center"><div style="display:flex;flex-direction:column;align-items:center;gap:1px">
-        <input class="ri" data-m="${m[0]}" value="${res}" placeholder="1/X/2" oninput="setRes(this)">
+        ${matchLocked
+          ? `<span style="display:inline-block;width:44px;text-align:center;padding:3px 4px;font-size:12px;border-radius:4px;background:${res?'#E8F5E9':'#f0f0f0'};color:${res?'#2E7D32':'#999'};font-weight:${res?700:400}">${res||'–'}</span>`
+          : `<input class="ri" data-m="${m[0]}" value="${res}" placeholder="1/X/2" oninput="setRes(this)">`
+        }
         ${lv?`<span class="sp">${lv.score}</span>`:''}
       </div></td>`;
     S.participants.forEach(p=>{
       const t=(S.tips[p]||{})[m[0]]||'';
       const hit=res&&t&&t===res,miss=res&&t&&t!==res;
-      const matchLocked=m[5]&&Date.now()>=m[5];
       const isMyCol=p===currentUser;
       if(matchLocked){
         // Kamp startet – vis resultat som badge for alle
@@ -530,7 +545,7 @@ function setTip(inp){
   const m=parseInt(inp.dataset.m);const p=decodeURIComponent(inp.dataset.p);const v=inp.value.toUpperCase().replace('U','X');
   // Dobbeltsikring: ignorer input hvis kamp er startet
   const match=M.find(x=>x[0]===m);
-  if(match&&match[5]&&Date.now()>=match[5]){inp.blur();return;}
+  if(match&&match[5]&&Date.now()>=(match[5]-3600000)){inp.blur();return;} // 1 time før
   inp.value=v;if(!S.tips[p])S.tips[p]={};S.tips[p][m]=v;
   const res=S.results[m]||'';
   inp.className='ti'+(res&&v&&v===res?' hit':res&&v&&v!==res?' miss':'');
