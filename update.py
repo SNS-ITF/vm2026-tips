@@ -14,8 +14,8 @@ from datetime import datetime, timezone
 MANUAL_RESULTS = {
     16: (1, 1),   # Belgium 1-1 Egypt         (15-jun)
     14: (0, 0),   # Spain 0-0 Cape Verde       (15-jun)
-    13: (1, 1), # Saudi Arabia vs Uruguay    (16-jun)
-    15: (2, 2), # IR Iran vs New Zealand     (16-jun)
+    # 13: (?, ?), # Saudi Arabia vs Uruguay    (16-jun)
+    # 15: (?, ?), # IR Iran vs New Zealand     (16-jun)
 }
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -139,3 +139,39 @@ out = {
     'count': len(sorted_results)
 }
 print(json.dumps(out, ensure_ascii=False, indent=2))
+
+
+# ─── Gem resultater direkte i Supabase ──────────────────────────────────────
+import urllib.request as urlreq
+
+SUPABASE_URL = 'https://fttdvrfibkxqzfljyhoj.supabase.co'
+SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGR2cmZpYmt4cXpmbGp5aG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTAzNDQsImV4cCI6MjA5NzEyNjM0NH0.juD8gL9wk_TRZMSRKtC4pQQ1WPTTBP3e8cRTByAxjEo'
+
+# Gem i korrekt format:
+# results: {"1": "1", "2": "X", ...}  <- kun tip-værdi (1/X/2)
+# live:    {"1": {"score": "2-0"}, ...} <- score til visning
+results_flat = {k: v['tip'] for k, v in sorted_results.items()}
+live = {k: {'score': v['score']} for k, v in sorted_results.items()}
+
+payload = json.dumps({
+    'id': 'results',
+    'data': json.dumps({'results': results_flat, 'live': live}),
+    'updated_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+}).encode()
+
+req = urlreq.Request(
+    f'{SUPABASE_URL}/rest/v1/tipskonkurrence',
+    data=payload,
+    method='POST',
+    headers={
+        'Authorization': f'Bearer {SUPABASE_KEY}',
+        'apikey': SUPABASE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+    }
+)
+try:
+    with urlreq.urlopen(req, timeout=10) as r:
+        print(f"Supabase opdateret: HTTP {r.status}", file=sys.stderr)
+except Exception as e:
+    print(f"Supabase fejl: {e}", file=sys.stderr)
