@@ -113,6 +113,10 @@ input.ri:focus{outline:none;border-color:#1a2d3d}
   <div class="tab" onclick="showTab('tips')">⚽ Tipsark</div>
 
 </div>
+<div id="user-bar" style="display:none" class="user-bar">
+  <span>Du tipper som: <strong id="user-bar-name"></strong></span>
+  <button onclick="changeUser()">Skift bruger</button>
+</div>
 <div class="body">
   <div id="savebar" class="savebar">✓ Gemt</div>
   <div id="t-stilling"></div>
@@ -387,7 +391,6 @@ function showTab(t){
   }
 }
 
-// Normaliser results fra Supabase - håndterer både {"1":"1"} og {"1":{"tip":"1",...}}
 function normalizeResults(raw) {
   const out = {};
   Object.entries(raw||{}).forEach(([k,v]) => {
@@ -536,6 +539,7 @@ function changeUser() {
 function updateUserBar() {
   const bar = document.getElementById('user-bar');
   const name = document.getElementById('user-bar-name');
+  if (!bar || !name) return;
   if (currentUser) {
     bar.style.display = 'flex';
     name.textContent = currentUser;
