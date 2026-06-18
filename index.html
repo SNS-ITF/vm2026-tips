@@ -295,18 +295,8 @@ async function load(){
     const resRow = await sb.get('tipskonkurrence', 'results');
     if (resRow && resRow.data) {
       const resData = JSON.parse(resRow.data);
-      // Normaliser results - håndter både {"1":"1"} og {"1":{"tip":"1","score":"2-0"}}
-      const rawRes = resData.results || {};
-      S.results = {};
-      Object.entries(rawRes).forEach(([k,v]) => {
-        S.results[String(k)] = (typeof v === 'object') ? String(v.tip) : String(v);
-      });
-      // Normaliser live scores
-      const rawLive = resData.live || {};
-      S.live = {};
-      Object.entries(rawLive).forEach(([k,v]) => {
-        S.live[String(k)] = (typeof v === 'object') ? v : {score: String(v)};
-      });
+      S.results = normalizeResults(resData.results);
+      S.live = resData.live || {};
     }
   } catch(e) {
     console.warn('Load fejl:', e.message);
@@ -395,6 +385,15 @@ function showTab(t){
   if(t==='tips'){
     renderTips();
   }
+}
+
+// Normaliser results fra Supabase - håndterer både {"1":"1"} og {"1":{"tip":"1",...}}
+function normalizeResults(raw) {
+  const out = {};
+  Object.entries(raw||{}).forEach(([k,v]) => {
+    out[String(k)] = (v && typeof v === 'object') ? String(v.tip||'') : String(v||'');
+  });
+  return out;
 }
 
 function scores(){
@@ -628,20 +627,11 @@ setInterval(async()=>{
     // Opdater resultater
     if(resRow&&resRow.data){
       const resData=JSON.parse(resRow.data);
-      // Normaliser til fladt format
-      const rawRes=resData.results||{};
-      const normRes={};
-      Object.entries(rawRes).forEach(([k,v])=>{
-        normRes[String(k)]=(typeof v==='object')?String(v.tip):String(v);
-      });
+      const normRes=normalizeResults(resData.results);
       const resChanged=JSON.stringify(normRes)!==JSON.stringify(S.results);
       if(resChanged){
         S.results=normRes;
-        const rawLive=resData.live||{};
-        S.live={};
-        Object.entries(rawLive).forEach(([k,v])=>{
-          S.live[String(k)]=(typeof v==='object')?v:{score:String(v)};
-        });
+        S.live=resData.live||{};
         needRender=true;
       }
     }
