@@ -280,6 +280,8 @@ let busy=false;
 async function load(){
   // Ryd gammel localStorage så den ikke overskriver Supabase-data
   localStorage.removeItem(STORE);
+  // Gendan live scores fra lokal cache
+  try{const lv=localStorage.getItem('vm2026_live');if(lv)S.live=JSON.parse(lv);}catch(e){}
   try {
     // Hent tips og deltagere fra shared-rækken
     const row = await sb.get('tipskonkurrence', 'shared');
@@ -352,26 +354,18 @@ async function fetchLive(manual){
     busy=false;return;
   }
 
-  let updated=0,unchanged=0;
-  // fetchLive opdaterer KUN live scores (målscorer til visning)
-  // S.results (1/X/2) styres autoritativt af Supabase via admin/GitHub Action
+  let updated=0;
+  // fetchLive opdaterer KUN S.live (målscorer til visning f.eks. "2–0")
+  // S.results (1/X/2) røres ALDRIG her – styres af Supabase alene
   Object.entries(data.results).forEach(([num,val])=>{
     const n=parseInt(num);
-    // Opdater kun live score-visning, ikke selve resultatet
-    const hadScore = S.live[String(n)]?.score;
-    if(!hadScore){
+    if(!S.live[String(n)]){
       S.live[String(n)]={score:val.score};
-      // Sæt kun tip hvis Supabase ikke allerede har det
-      if(!S.results[String(n)]){
-        S.results[String(n)]=val.tip;
-        updated++;
-      }
-    } else {
-      unchanged++;
+      updated++;
     }
   });
-
-  save();
+  // Gem KUN live scores lokalt – ikke results
+  try{localStorage.setItem('vm2026_live',JSON.stringify(S.live));}catch(e){}
   // Brug opdateringstidspunkt fra data.json hvis tilgængeligt
   const dataTs=data.updated?new Date(data.updated).toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Copenhagen'}):'';
   const fetchTs=new Date().toLocaleTimeString('da-DK',{hour:'2-digit',minute:'2-digit'});
@@ -412,14 +406,14 @@ function renderStilling(){
   const sorted=[...S.participants].sort((a,b)=>sc[b].pts-sc[a].pts);
   const medals=['🥇','🥈','🥉'];const cls=['gold','silver','bronze'];
   const played=M.filter(m=>S.results[String(m[0])]).length;
-  const lc=Object.keys(S.live).length;
+  const lc=Object.keys(S.results).length;
   el.innerHTML=`
   <div class="statbar">
     <div class="stat"><div class="stat-lbl">Kampe spillet</div><div class="stat-val">${played}/104</div></div>
     <div class="stat"><div class="stat-lbl">Deltagere</div><div class="stat-val">${S.participants.length}</div></div>
     <div class="stat"><div class="stat-lbl">Leder</div><div class="stat-val" style="font-size:15px;color:#F0830C">${sorted[0]||'–'}</div></div>
   </div>
-  ${lc?`<div style="font-size:12px;color:#2E7D32;margin-bottom:12px;padding:8px 12px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7">📡 ${lc} resultater hentet online – senest synkroniseret ved sidste klik</div>`:''}
+  ${lc?`<div style="font-size:12px;color:#2E7D32;margin-bottom:12px;padding:8px 12px;background:#E8F5E9;border-radius:8px;border:1px solid #A5D6A7">📡 ${lc} kampresultater indlæst</div>`:''}
   <div class="scard">
     <div class="shdr"><div></div><div>Deltager</div><div style="text-align:center">Point</div><div style="text-align:center">Rigtige</div><div style="text-align:center">Tipset</div></div>
     ${sorted.map((p,i)=>`<div class="srow ${cls[i]||''}"><div style="text-align:center;font-size:18px">${medals[i]||i+1}</div><div style="font-weight:${i<3?700:400}">${p}</div><div class="pts">${sc[p].pts}</div><div class="cnt">${sc[p].correct}</div><div class="cnt">${sc[p].entered}</div></div>`).join('')}
