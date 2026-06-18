@@ -391,7 +391,7 @@ function scores(){
   const sc={};
   S.participants.forEach(p=>{
     let pts=0,correct=0,entered=0;
-    M.forEach(m=>{const t=(S.tips[p]||{})[m[0]];const r=S.results[String(m[0])];if(t)entered++;if(t&&r&&t===r){pts++;correct++;}});
+    M.forEach(m=>{const t=(S.tips[p]||{})[String(m[0])];const r=S.results[String(m[0])];if(t)entered++;if(t&&r&&String(t)===String(r)){pts++;correct++;}});
     sc[p]={pts,correct,entered};
   });
   return sc;
@@ -471,7 +471,7 @@ function renderTips(){
         ${lv?`<span class="sp">${lv.score}</span>`:''}
       </div></td>`;
     S.participants.forEach(p=>{
-      const t=(S.tips[p]||{})[m[0]]||'';
+      const t=(S.tips[p]||{})[String(m[0])]||'';
       const hit=res&&t&&t===res,miss=res&&t&&t!==res;
       const isMyCol=p===currentUser;
       if(matchLocked){
@@ -540,9 +540,9 @@ function setFilter(f){S.filter=f;renderTips();}
 function setRes(inp){
   const m=parseInt(inp.dataset.m);const v=inp.value.toUpperCase().replace('U','X');
   S.results[String(m)]=v;inp.value=v;save();
-  document.querySelectorAll(`.ti[data-m="${m}"]`).forEach(t=>{
-    const tv=t.value.toUpperCase();
-    t.className='ti'+(v&&tv&&tv===v?' hit':v&&tv&&tv!==v?' miss':'');
+  document.querySelectorAll(`.ti[data-m="${m}"]`).forEach(inp2=>{
+    const tv=inp2.value.toUpperCase();
+    inp2.className='ti'+(v&&tv&&tv===v?' hit':v&&tv&&tv!==v?' miss':'');
   });
   renderStilling();
 }
@@ -552,9 +552,9 @@ function setTip(inp){
   // Dobbeltsikring: ignorer input hvis kamp er startet
   const match=M.find(x=>x[0]===m);
   if(match&&match[5]&&Date.now()>=(match[5]-3600000)){inp.blur();return;} // 1 time før
-  inp.value=v;if(!S.tips[p])S.tips[p]={};S.tips[p][m]=v;
+  inp.value=v;if(!S.tips[p])S.tips[p]={};S.tips[p][String(m)]=v;
   const res=S.results[String(m)]||'';
-  inp.className='ti'+(res&&v&&v===res?' hit':res&&v&&v!==res?' miss':'');
+  inp.className='ti'+(res&&v&&String(v)===String(res)?' hit':res&&v&&String(v)!==String(res)?' miss':'');
   save();renderStilling();
 }
 
