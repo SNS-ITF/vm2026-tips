@@ -2,7 +2,7 @@ name: Opdater kampresultater
  
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '0 * * * *'
   workflow_dispatch:
  
 jobs:
@@ -23,4 +23,3 @@ jobs:
           git add data.json
           git diff --cached --quiet || git commit -m "Auto: opdater kampresultater"
           git push
- 
