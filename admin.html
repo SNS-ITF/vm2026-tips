@@ -42,6 +42,7 @@ tr:nth-child(even) td{background:#fafafa}
   <p style="font-size:12px;color:#888;margin-bottom:10px">Klik for at udfylde alle kendte resultater og gem dem samlet til Supabase.</p>
   <button onclick="importKnown()" style="padding:8px 18px;background:#F0830C;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;margin-right:8px">Importer kendte resultater</button>
   <button onclick="saveAll()" style="padding:8px 18px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">Gem alle til Supabase</button>
+  <button onclick="fetchFromOpenfootball()" id="fetch-btn" style="padding:8px 18px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;margin-left:8px">🌐 Hent fra openfootball nu</button>
   <button onclick="debugSupabase()" style="padding:8px 18px;background:#666;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;margin-left:8px">Tjek Supabase</button>
 </div>
 
@@ -74,6 +75,15 @@ tr:nth-child(even) td{background:#fafafa}
       Tilføj
     </button>
   </div>
+</div>
+
+<div class="card" style="border-color:#EF9A9A">
+  <h2 style="color:#C62828">⚠️ Farezone</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:12px">Slet alle data permanent fra Supabase. Kan ikke fortrydes.</p>
+  <button onclick="resetAll()"
+    style="padding:8px 18px;background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600">
+    🗑 Nulstil alle data
+  </button>
 </div>
 
 <script>
@@ -438,11 +448,82 @@ async function removeParticipant(name) {
   renderParticipants();
 }
 
+// Mapning fra openfootball holdnavne til vores kampnumre
+const MATCH_MAP = {
+  'Mexico|South Africa':1, 'South Korea|Czech Republic':2, 'Canada|Bosnia & Herzegovina':3,
+  'USA|Paraguay':4, 'Haiti|Scotland':5, 'Australia|Turkey':6, 'Brazil|Morocco':7,
+  'Qatar|Switzerland':8, 'Ivory Coast|Ecuador':9, 'Germany|Curaçao':10, 'Netherlands|Japan':11,
+  'Sweden|Tunisia':12, 'Saudi Arabia|Uruguay':13, 'Spain|Cape Verde':14, 'IR Iran|New Zealand':15,
+  'Iran|New Zealand':15, 'Belgium|Egypt':16, 'France|Senegal':17, 'Iraq|Norway':18,
+  'Argentina|Algeria':19, 'Austria|Jordan':20, 'Ghana|Panama':21, 'England|Croatia':22,
+  'Portugal|DR Congo':23, 'Uzbekistan|Colombia':24, 'Czech Republic|South Africa':25,
+  'Switzerland|Bosnia & Herzegovina':26, 'Canada|Qatar':27, 'Mexico|South Korea':28,
+  'Brazil|Haiti':29, 'Scotland|Morocco':30, 'Turkey|Paraguay':31, 'USA|Australia':32,
+  'Germany|Ivory Coast':33, 'Ecuador|Curaçao':34, 'Netherlands|Sweden':35, 'Tunisia|Japan':36,
+  'Uruguay|Cape Verde':37, 'Spain|Saudi Arabia':38, 'Belgium|IR Iran':39, 'Belgium|Iran':39,
+  'New Zealand|Egypt':40, 'Norway|Senegal':41, 'France|Iraq':42, 'Argentina|Austria':43,
+  'Jordan|Algeria':44, 'England|Ghana':45, 'Panama|Croatia':46, 'Portugal|Uzbekistan':47,
+  'Colombia|DR Congo':48, 'Scotland|Brazil':49, 'Morocco|Haiti':50, 'Switzerland|Canada':51,
+  'Bosnia & Herzegovina|Qatar':52, 'Czech Republic|Mexico':53, 'South Africa|South Korea':54,
+  'Curaçao|Ivory Coast':55, 'Ecuador|Germany':56, 'Japan|Sweden':57, 'Tunisia|Netherlands':58,
+  'Turkey|USA':59, 'Paraguay|Australia':60, 'Norway|France':61, 'Senegal|Iraq':62,
+  'Egypt|IR Iran':63, 'Egypt|Iran':63, 'New Zealand|Belgium':64, 'Cape Verde|Saudi Arabia':65,
+  'Uruguay|Spain':66, 'Panama|England':67, 'Croatia|Ghana':68, 'Algeria|Austria':69,
+  'Jordan|Argentina':70, 'Colombia|Portugal':71, 'DR Congo|Uzbekistan':72,
+  'South Korea|Canada':73, 'Germany|Brazil':74, 'Japan|Morocco':75, 'Scotland|Netherlands':76,
+  'USA|Qatar':81,
+};
+
+function calcTipFromScore(s1, s2) {
+  if (s1 > s2) return '1';
+  if (s1 === s2) return 'X';
+  return '2';
+}
+
+async function fetchFromOpenfootball() {
+  const btn = document.getElementById('fetch-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Henter...';
+  try {
+    const url = 'https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json';
+    const r = await fetch(url, {cache: 'no-cache'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+
+    let updated = 0;
+    (data.matches || []).forEach(m => {
+      const ft = m.score?.ft;
+      if (!ft) return;
+      const key = `${m.team1}|${m.team2}`;
+      const num = MATCH_MAP[key];
+      if (!num) return;
+      const s1 = ft[0], s2 = ft[1];
+      const i1 = document.getElementById(`s1-${num}`);
+      const i2 = document.getElementById(`s2-${num}`);
+      if (i1 && i2 && (i1.value === '' || i1.value != s1 || i2.value != s2)) {
+        i1.value = s1;
+        i2.value = s2;
+        updated++;
+      }
+    });
+
+    showStatus('ok', `✓ ${updated} resultater hentet fra openfootball – klik "Gem alle til Supabase" for at gemme`);
+  } catch(e) {
+    showStatus('err', 'Fejl ved hentning: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🌐 Hent fra openfootball nu';
+  }
+}
+
 // Kendte resultater per 15. juni 2026
 const KNOWN = {
+  // Runde 1
   1: [2,0], 2: [2,1], 3: [1,1], 4: [4,1], 5: [0,1],
   6: [2,0], 7: [1,1], 8: [1,1], 9: [1,0], 10: [7,1],
-  11: [2,2], 12: [5,1], 14: [0,0], 16: [1,1]
+  11: [2,2], 12: [5,1], 13: [1,1], 14: [0,0], 15: [2,2],
+  16: [1,1], 17: [1,1], 18: [0,1], 19: [3,0], 20: [3,1],
+  21: [1,0], 22: [4,2], 23: [1,1], 24: [1,3],
 };
 
 function importKnown() {
@@ -478,6 +559,19 @@ async function saveAll() {
 }
 
 // Init – hent og vis hvad der er i Supabase
+async function resetAll() {
+  if (!confirm('Slet ALT — deltagere, tips og resultater?
+Dette kan ikke fortrydes.')) return;
+  state = {participants:[], tips:{}, results:{}, live:{}, filter:'all'};
+  try {
+    await saveShared();
+    await saveState();
+    showStatus('ok', '✓ Alle data nulstillet');
+    renderTable();
+    renderParticipants();
+  } catch(e) { showStatus('err', 'Fejl: ' + e.message); }
+}
+
 async function debugSupabase() {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?select=*`, {headers: sbHeaders});
   const d = await r.json();
