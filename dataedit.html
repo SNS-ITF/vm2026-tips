@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VM 2026 – Dataredigering</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#1a2d3d;padding:20px;max-width:1200px;margin:0 auto}
+h1{background:#1A2D3D;color:#fff;padding:14px 20px;border-radius:10px;font-size:17px;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.warn{background:#FFF8E1;border:1px solid #FFD54F;border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:13px;color:#5D4037;line-height:1.6}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px}
+.card h2{font-size:14px;font-weight:600;margin-bottom:12px;color:#1a2d3d}
+.toolbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.toolbar select{padding:7px 12px;border:1px solid #ccc;border-radius:8px;font-size:13px;background:#fff}
+.toolbar button{padding:7px 16px;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+.btn-primary{background:#1A2D3D;color:#fff}
+.btn-primary:hover{background:#243d52}
+.btn-orange{background:#F0830C;color:#fff}
+.btn-orange:hover{background:#d6730a}
+.btn-green{background:#2E7D32;color:#fff}
+.btn-green:hover{background:#1B5E20}
+.btn-red{background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A}
+.status{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;display:none}
+.status.ok{background:#E8F5E9;color:#2E7D32;border:1px solid #A5D6A7;display:block}
+.status.err{background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A;display:block}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#1A2D3D;color:#fff;padding:8px 10px;text-align:left;font-weight:600;position:sticky;top:0;z-index:2;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #eee;vertical-align:middle}
+tr:nth-child(even) td{background:#fafafa}
+tr:hover td{background:#f0f4f8}
+.tip-inp{width:52px;padding:4px 6px;font-size:13px;text-align:center;border:1px solid #ccc;border-radius:6px;background:#fff}
+.tip-inp:focus{outline:none;border-color:#F0830C}
+.tip-inp.changed{border-color:#F0830C;background:#FFF8F0;font-weight:600}
+.lock-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.lock-past{background:#FFEBEE;color:#C62828}
+.lock-open{background:#E8F5E9;color:#2E7D32}
+.sec{background:#1A2D3D!important;color:#fff;font-weight:600;padding:6px 10px;font-size:11px;letter-spacing:.04em}
+.changes-bar{background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;padding:10px 14px;font-size:13px;color:#E65100;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+
+<h1>✏️ VM 2026 – Dataredigering</h1>
+
+<div class="warn">
+  ⚠️ <strong>Advarsel:</strong> Denne side giver dig mulighed for at redigere tips på kampe der er låste (afsluttede). 
+  Brug kun til korrektion af fejl. Ændringer gemmes direkte til Supabase og er synlige for alle.
+</div>
+
+<div id="status" class="status"></div>
+<div id="changes-bar" class="changes-bar">📝 Du har ugemte ændringer — klik <strong>Gem ændringer</strong> for at gemme.</div>
+
+<div class="card">
+  <h2>Vælg deltager og filtrer</h2>
+  <div class="toolbar">
+    <select id="participant-select" onchange="renderTable()">
+      <option value="">-- Vælg deltager --</option>
+    </select>
+    <select id="round-filter" onchange="renderTable()">
+      <option value="all">Alle runder</option>
+      <option value="Gruppespil – Runde 1">Runde 1</option>
+      <option value="Gruppespil – Runde 2">Runde 2</option>
+      <option value="Gruppespil – Runde 3">Runde 3</option>
+      <option value="Runde af 32">R32</option>
+      <option value="Runde af 16">R16</option>
+      <option value="Kvartfinale">QF</option>
+      <option value="Semifinale">SF</option>
+      <option value="FINALE">Finale</option>
+    </select>
+    <select id="lock-filter" onchange="renderTable()">
+      <option value="all">Alle kampe</option>
+      <option value="locked">Kun låste (afsluttede)</option>
+      <option value="open">Kun åbne</option>
+    </select>
+    <button class="btn-green" onclick="saveChanges()">💾 Gem ændringer</button>
+    <button class="btn-red" onclick="discardChanges()">✗ Fortryd</button>
+  </div>
+  <div style="overflow-x:auto;border-radius:8px;border:1px solid #ddd">
+    <table>
+      <thead><tr>
+        <th style="width:40px">#</th>
+        <th style="width:100px">Dato</th>
+        <th>Hjemmehold</th>
+        <th style="width:20px"></th>
+        <th>Udehold</th>
+        <th style="width:80px;text-align:center">Status</th>
+        <th style="width:60px;text-align:center;background:#2E7D32">Resultat</th>
+        <th style="width:70px;text-align:center">Tip</th>
+      </tr></thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://fttdvrfibkxqzfljyhoj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ0dGR2cmZpYmt4cXpmbGp5aG9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NTAzNDQsImV4cCI6MjA5NzEyNjM0NH0.juD8gL9wk_TRZMSRKtC4pQQ1WPTTBP3e8cRTByAxjEo';
+
+const MATCHES = [
+  [1,'Mexico','South Africa','11-jun 23:00','Gruppespil – Runde 1',1781211600000],
+  [2,'Rep. of Korea','Czech Rep.','12-jun 06:00','Gruppespil – Runde 1',1781236800000],
+  [3,'Canada','Bosnia/Herzeg.','12-jun 23:00','Gruppespil – Runde 1',1781298000000],
+  [4,'USA','Paraguay','13-jun 05:00','Gruppespil – Runde 1',1781319600000],
+  [5,'Haiti','Scotland','14-jun 05:00','Gruppespil – Runde 1',1781406000000],
+  [6,'Australia','Turkey','14-jun 08:00','Gruppespil – Runde 1',1781416800000],
+  [7,'Brazil','Morocco','14-jun 02:00','Gruppespil – Runde 1',1781398800000],
+  [8,'Qatar','Switzerland','13-jun 23:00','Gruppespil – Runde 1',1781384400000],
+  [9,'Ivory Coast','Ecuador','15-jun 03:00','Gruppespil – Runde 1',1781485200000],
+  [10,'Germany','Curaçao','14-jun 21:00','Gruppespil – Runde 1',1781463600000],
+  [11,'Netherlands','Japan','15-jun 00:00','Gruppespil – Runde 1',1781474400000],
+  [12,'Sweden','Tunisia','15-jun 06:00','Gruppespil – Runde 1',1781496000000],
+  [13,'Saudi Arabia','Uruguay','16-jun 02:00','Gruppespil – Runde 1',1781568000000],
+  [14,'Spain','Cape Verde','15-jun 20:00','Gruppespil – Runde 1',1781557200000],
+  [15,'IR Iran','New Zealand','16-jun 05:00','Gruppespil – Runde 1',1781578800000],
+  [16,'Belgium','Egypt','15-jun 23:00','Gruppespil – Runde 1',1781560800000],
+  [17,'France','Senegal','16-jun 23:00','Gruppespil – Runde 1',1781643600000],
+  [18,'Iraq','Norway','17-jun 02:00','Gruppespil – Runde 1',1781654400000],
+  [19,'Argentina','Algeria','17-jun 05:00','Gruppespil – Runde 1',1781665200000],
+  [20,'Austria','Jordan','17-jun 08:00','Gruppespil – Runde 1',1781676000000],
+  [21,'Ghana','Panama','18-jun 03:00','Gruppespil – Runde 1',1781740800000],
+  [22,'England','Croatia','17-jun 00:00','Gruppespil – Runde 1',1781647200000],
+  [23,'Portugal','DR Congo','17-jun 21:00','Gruppespil – Runde 1',1781726400000],
+  [24,'Uzbekistan','Colombia','18-jun 06:00','Gruppespil – Runde 1',1781751600000],
+  [25,'Czech Rep.','South Africa','18-jun 20:00','Gruppespil – Runde 2',1781812800000],
+  [26,'Switzerland','Bosnia/Herzeg.','18-jun 23:00','Gruppespil – Runde 2',1781823600000],
+  [27,'Canada','Qatar','19-jun 02:00','Gruppespil – Runde 2',1781834400000],
+  [28,'Mexico','Rep. of Korea','19-jun 05:00','Gruppespil – Runde 2',1781845200000],
+  [29,'Brazil','Haiti','20-jun 04:30','Gruppespil – Runde 2',1781930400000],
+  [30,'Scotland','Morocco','20-jun 02:00','Gruppespil – Runde 2',1781920800000],
+  [31,'Turkey','Paraguay','20-jun 07:00','Gruppespil – Runde 2',1781938800000],
+  [32,'USA','Australia','19-jun 23:00','Gruppespil – Runde 2',1781906400000],
+  [33,'Germany','Ivory Coast','21-jun 00:00','Gruppespil – Runde 2',1781992800000],
+  [34,'Ecuador','Curaçao','21-jun 04:00','Gruppespil – Runde 2',1782007200000],
+  [35,'Netherlands','Sweden','20-jun 21:00','Gruppespil – Runde 2',1781985600000],
+  [36,'Tunisia','Japan','21-jun 08:00','Gruppespil – Runde 2',1782021600000],
+  [37,'Uruguay','Cape Verde','22-jun 02:00','Gruppespil – Runde 2',1782079200000],
+  [38,'Spain','Saudi Arabia','21-jun 20:00','Gruppespil – Runde 2',1782072000000],
+  [39,'Belgium','IR Iran','21-jun 23:00','Gruppespil – Runde 2',1782082800000],
+  [40,'New Zealand','Egypt','22-jun 05:00','Gruppespil – Runde 2',1782090000000],
+  [41,'Norway','Senegal','23-jun 04:00','Gruppespil – Runde 2',1782165600000],
+  [42,'France','Iraq','23-jun 01:00','Gruppespil – Runde 2',1782154800000],
+  [43,'Argentina','Austria','22-jun 21:00','Gruppespil – Runde 2',1782154800000],
+  [44,'Jordan','Algeria','23-jun 07:00','Gruppespil – Runde 2',1782183600000],
+  [45,'England','Ghana','24-jun 00:00','Gruppespil – Runde 2',1782241200000],
+  [46,'Panama','Croatia','24-jun 03:00','Gruppespil – Runde 2',1782252000000],
+  [47,'Portugal','Uzbekistan','23-jun 21:00','Gruppespil – Runde 2',1782237600000],
+  [48,'Colombia','DR Congo','24-jun 06:00','Gruppespil – Runde 2',1782262800000],
+  [49,'Scotland','Brazil','25-jun 02:00','Gruppespil – Runde 3',1782338400000],
+  [50,'Morocco','Haiti','25-jun 02:00','Gruppespil – Runde 3',1782338400000],
+  [51,'Switzerland','Canada','24-jun 23:00','Gruppespil – Runde 3',1782327600000],
+  [52,'Bosnia/Herzeg.','Qatar','24-jun 23:00','Gruppespil – Runde 3',1782327600000],
+  [53,'Czech Rep.','Mexico','25-jun 05:00','Gruppespil – Runde 3',1782349200000],
+  [54,'South Africa','Rep. of Korea','25-jun 05:00','Gruppespil – Runde 3',1782349200000],
+  [55,'Curaçao','Ivory Coast','26-jun 00:00','Gruppespil – Runde 3',1782424800000],
+  [56,'Ecuador','Germany','26-jun 00:00','Gruppespil – Runde 3',1782424800000],
+  [57,'Japan','Sweden','26-jun 03:00','Gruppespil – Runde 3',1782435600000],
+  [58,'Tunisia','Netherlands','26-jun 03:00','Gruppespil – Runde 3',1782435600000],
+  [59,'Turkey','USA','26-jun 06:00','Gruppespil – Runde 3',1782446400000],
+  [60,'Paraguay','Australia','26-jun 06:00','Gruppespil – Runde 3',1782446400000],
+  [61,'Norway','France','26-jun 23:00','Gruppespil – Runde 3',1782507600000],
+  [62,'Senegal','Iraq','26-jun 23:00','Gruppespil – Runde 3',1782507600000],
+  [63,'Egypt','IR Iran','27-jun 04:00','Gruppespil – Runde 3',1782522000000],
+  [64,'New Zealand','Belgium','27-jun 04:00','Gruppespil – Runde 3',1782522000000],
+  [65,'Cape Verde','Saudi Arabia','27-jun 04:00','Gruppespil – Runde 3',1782522000000],
+  [66,'Uruguay','Spain','27-jun 04:00','Gruppespil – Runde 3',1782522000000],
+  [67,'Panama','England','27-jun 01:00','Gruppespil – Runde 3',1782511200000],
+  [68,'Croatia','Ghana','27-jun 01:00','Gruppespil – Runde 3',1782511200000],
+  [69,'Algeria','Austria','27-jun 06:00','Gruppespil – Runde 3',1782532800000],
+  [70,'Jordan','Argentina','27-jun 07:00','Gruppespil – Runde 3',1782536400000],
+  [71,'Colombia','Portugal','27-jun 03:00','Gruppespil – Runde 3',1782518400000],
+  [72,'DR Congo','Uzbekistan','27-jun 06:00','Gruppespil – Runde 3',1782532800000],
+  [73,'Rep. of Korea','Canada','28-jun','Runde af 32',1782618000000],
+  [74,'Germany','Brazil','28-jun','Runde af 32',1782628800000],
+  [75,'Japan','Morocco','28-jun','Runde af 32',1782618000000],
+  [76,'Scotland','Netherlands','28-jun','Runde af 32',1782628800000],
+  [77,'Vinder I','3. plads CDFGH','29-jun','Runde af 32',1782704400000],
+  [78,'Vinder E','3. plads ABCDF','29-jun','Runde af 32',1782715200000],
+  [79,'Vinder A','3. plads CEFHI','29-jun','Runde af 32',1782704400000],
+  [80,'Vinder L','3. plads EHIJK','29-jun','Runde af 32',1782715200000],
+  [81,'USA','Qatar','29-jun','Runde af 32',1782704400000],
+  [82,'Vinder G','3. plads AEHIJ','30-jun','Runde af 32',1782790800000],
+  [83,'Vinder K','Vinder L','30-jun','Runde af 32',1782801600000],
+  [84,'Vinder H','Vinder J','30-jun','Runde af 32',1782790800000],
+  [85,'Vinder B','3. plads EFGIJ','30-jun','Runde af 32',1782801600000],
+  [86,'Vinder J','Vinder H','01-jul','Runde af 32',1782877200000],
+  [87,'Vinder K','3. plads DEIJL','01-jul','Runde af 32',1782888000000],
+  [88,'Vinder D','Vinder G','01-jul','Runde af 32',1782877200000],
+  [89,'W73','W77','03-jul','Runde af 16',1783044000000],
+  [90,'W73','W75','03-jul','Runde af 16',1783054800000],
+  [91,'W76','W78','04-jul','Runde af 16',1783130400000],
+  [92,'W79','W80','04-jul','Runde af 16',1783141200000],
+  [93,'W83','W84','05-jul','Runde af 16',1783216800000],
+  [94,'W81','W82','05-jul','Runde af 16',1783227600000],
+  [95,'W86','W88','06-jul','Runde af 16',1783303200000],
+  [96,'W85','W87','06-jul','Runde af 16',1783314000000],
+  [97,'W89','W90','10-jul','Kvartfinale',1783648800000],
+  [98,'W93','W94','11-jul','Kvartfinale',1783735200000],
+  [99,'W91','W92','12-jul','Kvartfinale',1783821600000],
+  [100,'W95','W96','12-jul','Kvartfinale',1783832400000],
+  [101,'W97','W98','15-jul','Semifinale',1784080800000],
+  [102,'W99','W100','16-jul','Semifinale',1784167200000],
+  [103,'Tab. SF1','Tab. SF2','19-jul','Kamp om 3. plads',1784426400000],
+  [104,'W101','W102','19-jul','FINALE',1784437200000],
+];
+
+const sbHeaders = {
+  'Authorization': `Bearer ${SUPABASE_KEY}`,
+  'apikey': SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  'Accept': 'application/json'
+};
+
+let state = {participants:[], tips:{}, results:{}};
+let changes = {}; // {participantName: {matchNum: newTip}}
+
+function isLocked(m) {
+  return m[5] && Date.now() >= (m[5] - 3600000);
+}
+
+async function load() {
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.shared&select=data`, {headers: sbHeaders}),
+      fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence?id=eq.results&select=data`, {headers: sbHeaders})
+    ]);
+    const [d1, d2] = await Promise.all([r1.json(), r2.json()]);
+    if (d1[0]?.data) {
+      const s = JSON.parse(d1[0].data);
+      state.participants = s.participants || [];
+      state.tips = s.tips || {};
+    }
+    if (d2[0]?.data) {
+      const r = JSON.parse(d2[0].data);
+      state.results = r.results || {};
+    }
+  } catch(e) {
+    showStatus('err', 'Fejl ved indlæsning: ' + e.message);
+  }
+
+  // Fyld deltager-dropdown
+  const sel = document.getElementById('participant-select');
+  state.participants.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p; opt.textContent = p;
+    sel.appendChild(opt);
+  });
+
+  renderTable();
+}
+
+function renderTable() {
+  const p = document.getElementById('participant-select').value;
+  const roundFilter = document.getElementById('round-filter').value;
+  const lockFilter = document.getElementById('lock-filter').value;
+  const tbody = document.getElementById('table-body');
+
+  if (!p) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#888">Vælg en deltager for at se tips</td></tr>';
+    return;
+  }
+
+  let html = '';
+  let lastSection = '';
+  const tips = state.tips[p] || {};
+
+  MATCHES.forEach(m => {
+    const locked = isLocked(m);
+    if (lockFilter === 'locked' && !locked) return;
+    if (lockFilter === 'open' && locked) return;
+    if (roundFilter !== 'all' && m[4] !== roundFilter) return;
+
+    if (m[4] !== lastSection) {
+      lastSection = m[4];
+      html += `<tr><td colspan="8" class="sec">${m[4]}</td></tr>`;
+    }
+
+    const res = state.results[String(m[0])] || '';
+    const origTip = tips[String(m[0])] || '';
+    const pendingTip = (changes[p] || {})[String(m[0])];
+    const displayTip = pendingTip !== undefined ? pendingTip : origTip;
+    const isChanged = pendingTip !== undefined && pendingTip !== origTip;
+    const hit = res && displayTip && String(displayTip) === String(res);
+    const miss = res && displayTip && String(displayTip) !== String(res);
+
+    html += `<tr>
+      <td style="font-weight:700;color:#1a2d3d">${m[0]}</td>
+      <td style="font-size:11px;color:#888">${m[3]}${locked?' 🔒':''}</td>
+      <td>${m[1]}</td>
+      <td style="color:#ccc">–</td>
+      <td>${m[2]}</td>
+      <td style="text-align:center">
+        <span class="lock-badge ${locked?'lock-past':'lock-open'}">${locked?'Låst':'Åben'}</span>
+      </td>
+      <td style="text-align:center;font-weight:700;color:#1a2d3d">${res||'–'}</td>
+      <td style="text-align:center">
+        <input class="tip-inp${isChanged?' changed':''}"
+          style="border-color:${hit?'#2E7D32':miss?'#C62828':''}; background:${hit?'#E8F5E9':miss?'#FFEBEE':isChanged?'#FFF8F0':'#fff'}"
+          data-m="${m[0]}" data-p="${encodeURIComponent(p)}"
+          value="${displayTip}" placeholder="?"
+          oninput="markChange(this)">
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888">Ingen kampe matcher filteret</td></tr>';
+  updateChangesBar();
+}
+
+function markChange(inp) {
+  const m = String(inp.dataset.m);
+  const p = decodeURIComponent(inp.dataset.p);
+  const v = inp.value.toUpperCase().replace('U','X').replace('u','X');
+  inp.value = v;
+  if (!changes[p]) changes[p] = {};
+  const orig = (state.tips[p] || {})[m] || '';
+  if (v === orig) {
+    delete changes[p][m];
+  } else {
+    changes[p][m] = v;
+  }
+  inp.className = 'tip-inp' + (Object.keys(changes[p]||{}).length > 0 ? ' changed' : '');
+  updateChangesBar();
+}
+
+function updateChangesBar() {
+  const bar = document.getElementById('changes-bar');
+  const total = Object.values(changes).reduce((s,o)=>s+Object.keys(o).length,0);
+  bar.style.display = total > 0 ? 'block' : 'none';
+  bar.innerHTML = `📝 ${total} ugemte ændringer — klik <strong>Gem ændringer</strong> for at gemme til Supabase.`;
+}
+
+async function saveChanges() {
+  const total = Object.values(changes).reduce((s,o)=>s+Object.keys(o).length,0);
+  if (total === 0) { showStatus('ok', 'Ingen ændringer at gemme'); return; }
+
+  // Flet ændringer ind i state.tips
+  Object.entries(changes).forEach(([p, tipChanges]) => {
+    if (!state.tips[p]) state.tips[p] = {};
+    Object.entries(tipChanges).forEach(([m, v]) => {
+      if (v === '') {
+        delete state.tips[p][m];
+      } else {
+        state.tips[p][m] = v;
+      }
+    });
+  });
+
+  // Gem til Supabase
+  const shareData = {participants: state.participants, tips: state.tips};
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/tipskonkurrence`, {
+      method: 'POST',
+      headers: {...sbHeaders, 'Prefer': 'resolution=merge-duplicates'},
+      body: JSON.stringify({id:'shared', data: JSON.stringify(shareData), updated_at: new Date().toISOString()})
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    changes = {};
+    showStatus('ok', `✓ ${total} ændringer gemt til Supabase`);
+    renderTable();
+  } catch(e) {
+    showStatus('err', 'Fejl ved gem: ' + e.message);
+  }
+}
+
+function discardChanges() {
+  if (!confirm('Fortryd alle ugemte ændringer?')) return;
+  changes = {};
+  renderTable();
+  showStatus('ok', 'Ændringer fortrudt');
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  el.textContent = msg;
+  setTimeout(() => el.style.display='none', 4000);
+}
+
+load();
+</script>
+</body>
+</html>
